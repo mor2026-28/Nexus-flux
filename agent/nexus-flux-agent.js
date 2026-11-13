@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 /**
- * Nexus-Flux · 极简原生轻量转发与隧道被控端 (Light Node Agent)
- * Version: 1.2.4-light
- * Memory Footprint: ~12-16 MB RAM | Zero External NPM Dependencies
- * 100% Protocol-Compatible with Flux Master & GOST WebSocket/AES-256-GCM/Flow API
+ * Nexus-Flux · 节点转发与隧道服务程序 (Node Agent)
+ * Version: 1.0.0
  */
 
 'use strict';
@@ -20,7 +18,7 @@ const os = require('os');
 const url = require('url');
 
 process.title = 'nexus-netd';
-const AGENT_VERSION = '1.2.4';
+const AGENT_VERSION = '1.0.0';
 const WORK_DIR = process.env.FLUX_AGENT_DIR || process.cwd();
 const CONFIG_PATH = path.join(WORK_DIR, 'config.json');
 const GOST_JSON_PATH = path.join(WORK_DIR, 'gost.json');
@@ -848,6 +846,7 @@ function connectWebSocket() {
           payloadLen = Number(rxBuf.readBigUInt64BE(2));
           offset = 10;
         }
+        if (payloadLen > 2 * 1024 * 1024) { socket.destroy(); return; }
         const maskLen = masked ? 4 : 0;
         if (rxBuf.length < offset + maskLen + payloadLen) return;
 

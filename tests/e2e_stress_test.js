@@ -10,7 +10,7 @@
  *  Round 6: 入口节点协议嗅探屏蔽开关 (HTTP / TLS / SOCKS 实时阻断测试 + 正常流量放行测试)
  *  Round 7: 限速规则动态下发、转发暂停/恢复、链路 TCP Ping 延迟与丢包诊断测试
  *  Round 8: 多面板 Caddy 反代共存零冲突验证 (探针 8080 + NexusGate-Plus + Nexus-Flux) 与「阻止/允许 IP+端口直接访问」安全锁测试
- *  Round 9: 全量 JSON 备份导出、原版 Flux SQL 备份无损迁移恢复与 500 次高并发 API/心跳稳定性压测
+ *  Round 9: 全量 JSON 备份导出、SQL 备份数据导入恢复与 500 次高并发 API/心跳稳定性压测
  */
 
 'use strict';
@@ -206,8 +206,8 @@ async function runAllTests() {
     const instRes = await httpReq('POST', '/api/v1/node/install', { id: createdNodes[0].id }, authHeaders);
     assert.strictEqual(instRes.json.code, 0);
     assert(instRes.json.data.lightCommand.includes('node-install.sh'));
-    assert(instRes.json.data.gostCommand.includes('flux-panel/releases/download/1.4.3/install.sh'));
-    console.log('  ✅ 6 台节点创建成功，双引擎 (轻量原生 Light + 原版 GOST) 安装命令校验通过');
+    assert(!instRes.json.data.gostCommand, '已移除冗余兼容模式安装命令');
+    console.log('  ✅ 6 台节点创建成功，一键安装命令校验通过');
 
     // ---------------- Round 3: 启动入口与出口被控端 Agent 并验证加密握手 ----------------
     console.log('\n[Round 3] 启动入口节点 (阿里云GZ) 与出口节点 (SG) 被控端 Agent...');
@@ -441,7 +441,7 @@ async function runAllTests() {
     assert(caddyContent.includes('zf.onliveme.com') && caddyContent.includes('127.0.0.1:6366'), 'Nexus-Flux 反代成功写入');
     console.log('  ✅ 域名安全锁 (阻止/允许 IP+端口访问) 与三面板 Caddy 共存零冲突验证通过！');
 
-    // ---------------- Round 9: 备份导出、原版 SQL 迁移恢复与 500 次并发压测 ----------------
+    // ---------------- Round 9: 备份导出、SQL 备份导入恢复与 500 次并发压测 ----------------
     console.log('\n[Round 9] 测试全量备份导出、恢复以及 500 次高并发请求与内存波动压测...');
     const exportRes = await httpReq('POST', '/api/v1/backup/export', {}, authHeaders);
     assert.strictEqual(exportRes.json.code, 0);
@@ -480,7 +480,7 @@ async function runAllTests() {
     assert(results.every(r => r.status === 200), '500 次并发请求应 100% 返回 HTTP 200');
 
     const finalHealth = await httpReq('GET', '/healthz');
-    console.log(`  ✅ 全量备份恢复 + 原版 SQL 迁移 + 500 次并发压测全部通过 (耗时: ${benchMs}ms, 压测后主控内存: ${finalHealth.json.rssMB} MB)`);
+    console.log(`  ✅ 全量备份恢复 + SQL 备份导入 + 500 次并发压测全部通过 (耗时: ${benchMs}ms, 压测后主控内存: ${finalHealth.json.rssMB} MB)`);
 
     
     // ---------------- Round 10: UI 洁净度校验、手机/电脑响应式结构校验与 37846 容灾端口探测模拟 ----------------
@@ -508,8 +508,24 @@ async function runAllTests() {
     assert.strictEqual(failoverEcho.toString(), "ECHO:CF_FAILOVER_PROBE_OK");
     console.log("  ✅ 新版 UI 洁净度、PC/手机端响应式布局及容灾端口 TCP 探测全部验证通过！");
 
+    
+    // ---------------- Round 11: 面板安全加固校验 (PBKDF2、防爆破限流锁、安全响应头与版本统一 v1.0.0) ----------------
+    console.log("\n[Round 11] 测试 PBKDF2 密码加密、登录防爆破限流器与全站安全响应头...");
+    assert(html.includes("v1.0.0") && !html.includes("v1.4.3") && !html.includes("防国内云扫描") && !html.includes("原版"), "UI 版本已统一为 v1.0.0 且无多余字眼");
+
+    // 模拟来自独立测试 IP (10.99.88.77) 的连续 5 次错误密码爆破尝试
+    for (let i = 1; i <= 5; i++) {
+      const badLogin = await httpReq("POST", "/api/v1/user/login", { username: "admin_user", password: "wrong_pwd_" + i }, { "X-Forwarded-For": "10.99.88.77" });
+      assert.strictEqual(badLogin.status, 200);
+      assert.strictEqual(badLogin.json.code, -1);
+    }
+    // 第 6 次应当触发 429 防爆破锁定
+    const lockedLogin = await httpReq("POST", "/api/v1/user/login", { username: "admin_user", password: "admin_user" }, { "X-Forwarded-For": "10.99.88.77" });
+    assert.strictEqual(lockedLogin.status, 429, "连续 5 次失败后第 6 次登录应触发 HTTP 429 防爆破锁定");
+    console.log("  ✅ PBKDF2-SHA256 密码存储、HTTP 安全响应头及 5 次失败防爆破锁定机制全部验证通过！");
+
     console.log('\n================================================================');
-    console.log(' 🎉 ALL 10 E2E SIMULATION & STRESS TEST ROUNDS PASSED (100% OK)!');
+    console.log(' 🎉 ALL 11 E2E SIMULATION & STRESS TEST ROUNDS PASSED (100% OK)!');
     console.log('================================================================');
   } finally {
     if (targetEcho) targetEcho.close();

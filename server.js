@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 /**
- * Nexus-Flux · 极简轻量级端口转发与隧道主控面板 (Master Server)
- * Version: 1.0.0
- * Architecture: Zero-Dependency Native Node.js + In-Memory O(1) Cache + Batched Atomic Persistence
- * Protocol Compatibility: 100% Compatible with Flux GOST (v1.2.4+) & Nexus-Flux Native Light Agent
+ * Nexus-Flux · 端口转发与加密隧道主控服务端 (Master Server)
+ * Version: v1.0.0
  */
 
 'use strict';
@@ -18,7 +16,7 @@ const net = require('net');
 const os = require('os');
 
 // ======================= 配置与全局变量 =======================
-const VERSION = '1.4.3-nexus.1';
+const VERSION = '1.0.0';
 const PANEL_VERSION = 'v1.0.0';
 const DATA_DIR = process.env.NEXUS_FLUX_DATA_DIR || path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'flux-db.json');
@@ -32,10 +30,10 @@ let cachedIndexGzip = null;
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-// 默认数据库结构（已移除冗余多用户管理表，保留单租户管理员与全部核心转发/隧道/节点/限速/流量统计能力）
+// 默认数据库结构
 function createDefaultDb() {
   const now = Date.now();
-  const defaultPwdHash = md5('admin_user');
+  const defaultPwdHash = hashPassword('admin_user');
   return {
     meta: {
       version: PANEL_VERSION,
@@ -52,7 +50,7 @@ function createDefaultDb() {
     admin: {
       id: 1,
       user: process.env.FLUX_ADMIN_USER || 'admin_user',
-      pwd: process.env.FLUX_ADMIN_PWD ? md5(process.env.FLUX_ADMIN_PWD) : defaultPwdHash,
+      pwd: process.env.FLUX_ADMIN_PWD ? hashPassword(process.env.FLUX_ADMIN_PWD) : defaultPwdHash,
       roleId: 0,
       inFlow: 0,
       outFlow: 0,
@@ -63,7 +61,7 @@ function createDefaultDb() {
       ip: process.env.FLUX_PUBLIC_ADDR || '',
       panel_domain: process.env.FLUX_PANEL_DOMAIN || '',
       block_ip_access: process.env.FLUX_BLOCK_IP === '1' ? 'true' : 'false',
-      agent_mode: 'light', // 'light' (Nexus-Flux 原生轻量被控) 或 'gost' (原版 GOST 二进制)
+      agent_mode: 'light',
       github_repo: 'mor2026-28/Nexus-flux',
       theme: 'light'
     },
@@ -77,6 +75,59 @@ function createDefaultDb() {
 
 function md5(str) {
   return crypto.createHash('md5').update(String(str), 'utf8').digest('hex');
+}
+
+function hashPassword(plainPwd) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.pbkdf2Sync(String(plainPwd), salt, 100000, 32, 'sha256').toString('hex');
+  return `pbkdf2$${salt}$${derived}`;
+}
+
+function verifyPassword(plainPwd, storedHash) {
+  if (!storedHash || typeof storedHash !== 'string') return false;
+  if (storedHash.startsWith('pbkdf2$')) {
+    const parts = storedHash.split('$');
+    if (parts.length !== 3) return false;
+    const salt = parts[1];
+    const expectedHex = parts[2];
+    const actualBuf = crypto.pbkdf2Sync(String(plainPwd), salt, 100000, 32, 'sha256');
+    const expectedBuf = Buffer.from(expectedHex, 'hex');
+    if (actualBuf.length !== expectedBuf.length) return false;
+    return crypto.timingSafeEqual(actualBuf, expectedBuf);
+  }
+  // 兼容旧版 32 位 MD5 并在登录成功后自动升级为 PBKDF2
+  const actualMd5 = Buffer.from(md5(plainPwd), 'utf8');
+  const expectedMd5 = Buffer.from(storedHash, 'utf8');
+  if (actualMd5.length !== expectedMd5.length) return false;
+  return crypto.timingSafeEqual(actualMd5, expectedMd5);
+}
+
+// 登录防爆破限流器 (同 IP 15分钟内最多允许 5 次失败尝试)
+const loginAttemptMap = new Map();
+function checkLoginRateLimit(ip) {
+  const now = Date.now();
+  const rec = loginAttemptMap.get(ip);
+  if (!rec) return { allowed: true };
+  if (now - rec.firstAt > 15 * 60 * 1000) {
+    loginAttemptMap.delete(ip);
+    return { allowed: true };
+  }
+  if (rec.count >= 5) {
+    return { allowed: false, retryAfterSec: Math.ceil((15 * 60 * 1000 - (now - rec.firstAt)) / 1000) };
+  }
+  return { allowed: true };
+}
+function recordLoginFailure(ip) {
+  const now = Date.now();
+  const rec = loginAttemptMap.get(ip);
+  if (!rec || now - rec.firstAt > 15 * 60 * 1000) {
+    loginAttemptMap.set(ip, { count: 1, firstAt: now });
+  } else {
+    rec.count += 1;
+  }
+}
+function clearLoginFailures(ip) {
+  loginAttemptMap.delete(ip);
 }
 
 function simpleUUID() {
@@ -254,7 +305,9 @@ function verifyJwt(token) {
   const parts = clean.split('.');
   if (parts.length !== 3) return null;
   const expectedSig = crypto.createHmac('sha256', jwtSecret).update(`${parts[0]}.${parts[1]}`).digest('base64url');
-  if (parts[2] !== expectedSig) return null;
+  const sigBuf = Buffer.from(parts[2], 'utf8');
+  const expBuf = Buffer.from(expectedSig, 'utf8');
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return null;
   try {
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
     if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
@@ -301,6 +354,7 @@ class WsConnection {
         offset = 10;
       }
 
+      if (payloadLen > 2 * 1024 * 1024) { this.close(); return; }
       const maskLength = masked ? 4 : 0;
       if (this.buffer.length < offset + maskLength + payloadLen) return;
 
@@ -429,7 +483,7 @@ function sendNodeCommand(nodeId, cmdType, data, timeoutMs = 8000) {
   });
 }
 
-// ======================= GOST 配置构建器 (100% 兼容原版 GostUtil.java) =======================
+// ======================= 节点转发与隧道配置构建器 =======================
 const GostBuilder = {
   createLimiterData(name, speedMBps) {
     return {
@@ -733,6 +787,10 @@ function sendJson(res, statusCode, obj) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'no-referrer',
     'Cache-Control': 'no-store'
   });
   res.end(body);
@@ -742,6 +800,10 @@ function sendText(res, statusCode, text, contentType = 'text/plain; charset=utf-
   res.writeHead(statusCode, {
     'Content-Type': contentType,
     'Access-Control-Allow-Origin': '*',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'no-referrer',
     'Cache-Control': 'no-store'
   });
   res.end(text);
@@ -798,7 +860,7 @@ function isBlockedByDomainLock(req, pathname) {
   return true;
 }
 
-// ======================= 原版 Flux SQL 备份解析器 (支持从 gost.sql 无损迁移) =======================
+// ======================= SQL 备份导入解析器 =======================
 function parseFluxSqlDump(sqlText) {
   const result = { nodes: [], tunnels: [], forwards: [], speedLimits: [] };
   // 提取 INSERT INTO `table` (...) VALUES (...);
@@ -851,7 +913,7 @@ function parseFluxSqlDump(sqlText) {
           serverIp: obj.server_ip || obj.ip || '',
           portSta: Number(obj.port_sta) || 1000,
           portEnd: Number(obj.port_end) || 65535,
-          version: obj.version || '1.2.4',
+          version: obj.version || '1.0.0',
           http: Number(obj.http) || 0,
           tls: Number(obj.tls) || 0,
           socks: Number(obj.socks) || 0,
@@ -1001,7 +1063,7 @@ async function handleHttpRequest(req, res) {
           const rawD = Math.max(0, Number(flowData.d) || 0);
           const rawU = Math.max(0, Number(flowData.u) || 0);
 
-          // 乘以倍率；当双向计费(2)或单向计费(1)时保持与原版一致的直观统计
+          // 乘以流量倍率统计
           const addIn = Math.round(rawD * ratio * (flowMode === 2 ? 1 : 1));
           const addOut = Math.round(rawU * ratio * (flowMode === 2 ? 1 : 1));
 
@@ -1089,9 +1151,20 @@ async function handleHttpRequest(req, res) {
     }
 
     if (subPath === '/user/login') {
+      const clientIp = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+      const rateCheck = checkLoginRateLimit(clientIp);
+      if (!rateCheck.allowed) {
+        sendJson(res, 429, R.err(`登录失败次数过多，请 ${Math.ceil(rateCheck.retryAfterSec / 60)} 分钟后再试`, 429));
+        return;
+      }
       const username = String(bodyObj.username || '').trim();
       const password = String(bodyObj.password || '').trim();
-      if (username === db.admin.user && md5(password) === db.admin.pwd) {
+      if (username === db.admin.user && verifyPassword(password, db.admin.pwd)) {
+        clearLoginFailures(clientIp);
+        if (!String(db.admin.pwd).startsWith('pbkdf2$')) {
+          db.admin.pwd = hashPassword(password);
+          markDirty();
+        }
         const token = signJwt({ sub: db.admin.id, role_id: 0, user: db.admin.user });
         const requirePasswordChange = (db.admin.user === 'admin_user' && password === 'admin_user');
         sendJson(res, 200, R.okData({
@@ -1101,6 +1174,7 @@ async function handleHttpRequest(req, res) {
           requirePasswordChange
         }));
       } else {
+        recordLoginFailure(clientIp);
         sendJson(res, 200, R.err('用户名或密码错误'));
       }
       return;
@@ -1174,7 +1248,7 @@ async function handleHttpRequest(req, res) {
 
     if (subPath === '/user/updatePassword') {
       const { currentPassword, newUsername, newPassword } = bodyObj;
-      if (md5(currentPassword || '') !== db.admin.pwd) {
+      if (!verifyPassword(currentPassword || '', db.admin.pwd)) {
         sendJson(res, 200, R.err('当前密码不正确'));
         return;
       }
@@ -1185,7 +1259,7 @@ async function handleHttpRequest(req, res) {
       if (newUsername && String(newUsername).trim()) {
         db.admin.user = String(newUsername).trim();
       }
-      db.admin.pwd = md5(newPassword);
+      db.admin.pwd = hashPassword(newPassword);
       db.admin.updatedTime = Date.now();
       saveDbSync();
       sendJson(res, 200, R.ok('账号密码修改成功'));
@@ -1337,12 +1411,10 @@ async function handleHttpRequest(req, res) {
       }
       const rawHost = (db.configs.ip || req.headers.host || '127.0.0.1:6366').trim();
       const cleanAddr = rawHost.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-      const lightCmd = `curl -fsSL http://${cleanAddr}/node-install.sh -o ./node-install.sh && chmod +x ./node-install.sh && ./node-install.sh -a ${cleanAddr} -s ${node.secret} -m light`;
-      const gostCmd = `curl -L https://github.com/bqlpfy/flux-panel/releases/download/1.4.3/install.sh -o ./install.sh && chmod +x ./install.sh && ./install.sh -a ${cleanAddr} -s ${node.secret}`;
+      const installCmd = `curl -fsSL http://${cleanAddr}/node-install.sh -o ./node-install.sh && chmod +x ./node-install.sh && ./node-install.sh -a ${cleanAddr} -s ${node.secret}`;
       sendJson(res, 200, R.okData({
-        defaultCommand: db.configs.agent_mode === 'gost' ? gostCmd : lightCmd,
-        lightCommand: lightCmd,
-        gostCommand: gostCmd,
+        defaultCommand: installCmd,
+        lightCommand: installCmd,
         secret: node.secret,
         serverAddr: cleanAddr
       }));
@@ -1915,7 +1987,7 @@ async function handleHttpRequest(req, res) {
 
     if (subPath === '/backup/import') {
       try {
-        // 支持两种格式：1) Nexus-Flux JSON 备份; 2) 原版 Flux MySQL .sql 导出文件
+        // 支持 JSON 备份与 SQL 备份文件
         if (typeof bodyObj.sqlContent === 'string' && bodyObj.sqlContent.trim()) {
           const migrated = parseFluxSqlDump(bodyObj.sqlContent);
           if (migrated.nodes.length === 0 && migrated.tunnels.length === 0 && migrated.forwards.length === 0) {
@@ -1936,7 +2008,7 @@ async function handleHttpRequest(req, res) {
             tunnels: db.tunnels.length,
             forwards: db.forwards.length,
             speedLimits: db.speedLimits.length
-          }, '原版 Flux SQL 备份无损迁移恢复成功'));
+          }, 'SQL 备份数据导入恢复成功'));
           return;
         }
 
@@ -2083,7 +2155,7 @@ function handleWsUpgrade(req, socket, head) {
     }
     wsMeta.nodeId = Number(node.id);
     wsMeta.secret = secret;
-    wsMeta.version = query.version ? String(query.version) : '1.2.4';
+    wsMeta.version = query.version ? String(query.version) : '1.0.0';
     wsMeta.http = query.http !== undefined ? Number(query.http) : node.http;
     wsMeta.tls = query.tls !== undefined ? Number(query.tls) : node.tls;
     wsMeta.socks = query.socks !== undefined ? Number(query.socks) : node.socks;
