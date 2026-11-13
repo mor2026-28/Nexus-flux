@@ -1,0 +1,15 @@
+{
+  "name": "nexus-flux",
+  "version": "1.0.0",
+  "description": "Ultra-lightweight port forwarding and tunnel relay control panel (Flux secondary development for low-RAM servers)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --max-old-space-size=64 server.js",
+    "agent": "node --max-semi-space-size=2 --max-old-space-size=48 agent/nexus-flux-agent.js",
+    "test": "node tests/e2e_stress_test.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "license": "GPL-3.0"
+}
