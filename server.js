@@ -26,6 +26,8 @@ const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const AGENT_SCRIPT_PATH = path.join(__dirname, 'agent', 'nexus-flux-agent.js');
 const NODE_INSTALL_SCRIPT_PATH = path.join(__dirname, 'node-install.sh');
+let cachedIndexHtml = null;
+let cachedIndexGzip = null;
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
@@ -1985,10 +1987,24 @@ async function handleHttpRequest(req, res) {
     return;
   }
 
-  // ================== 3. 静态前端单页应用服务 ==================
+  // ================== 3. 静态前端单页应用服务 (内存缓存 + Gzip 极速响应) ==================
   const indexHtmlPath = path.join(PUBLIC_DIR, 'index.html');
-  if (fs.existsSync(indexHtmlPath)) {
-    sendText(res, 200, fs.readFileSync(indexHtmlPath, 'utf8'), 'text/html; charset=utf-8');
+  if (!cachedIndexHtml && fs.existsSync(indexHtmlPath)) {
+    cachedIndexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+    cachedIndexGzip = zlib.gzipSync(Buffer.from(cachedIndexHtml, 'utf8'));
+  }
+  if (cachedIndexHtml) {
+    const acceptEnc = String(req.headers['accept-encoding'] || '');
+    if (acceptEnc.includes('gzip') && cachedIndexGzip) {
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Encoding': 'gzip',
+        'Cache-Control': 'no-cache'
+      });
+      res.end(cachedIndexGzip);
+    } else {
+      sendText(res, 200, cachedIndexHtml, 'text/html; charset=utf-8');
+    }
   } else {
     sendText(res, 200, 'Nexus-Flux Master Running', 'text/plain; charset=utf-8');
   }

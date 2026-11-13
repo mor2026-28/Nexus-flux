@@ -482,8 +482,34 @@ async function runAllTests() {
     const finalHealth = await httpReq('GET', '/healthz');
     console.log(`  ✅ 全量备份恢复 + 原版 SQL 迁移 + 500 次并发压测全部通过 (耗时: ${benchMs}ms, 压测后主控内存: ${finalHealth.json.rssMB} MB)`);
 
+    
+    // ---------------- Round 10: UI 洁净度校验、手机/电脑响应式结构校验与 37846 容灾端口探测模拟 ----------------
+    console.log("\n[Round 10] 校验新版 UI 洁净度、响应式卡片网格与 37846 自动化容灾端口探测...");
+    const uiRes = await httpReq("GET", "/");
+    assert.strictEqual(uiRes.status, 200);
+    const html = uiRes.raw;
+    assert(!html.includes("无Java/无Docker"), "已移除 (无Java/无Docker) 标语");
+    assert(!html.includes("华为云 SG 优化"), "已移除 (华为云 SG 优化) 标语");
+    assert(!html.includes("轻量专享版"), "已移除 轻量专享版 标语");
+    assert(!html.includes("多面板共存说明"), "已移除 多面板共存说明 标语");
+    assert(html.includes("24小时流量统计") && html.includes("dash-top-grid") && html.includes("cards-grid") && html.includes("mobile-menu-btn"), "包含完整24h图表、卡片网格与移动端自适应抽屉");
+
+    // 模拟用户的 37846 端口转发与 Cloudflare 容灾探测 (对应截图 failover.sh CHECK_PORT=37846)
+    const failoverFwdRes = await httpReq("POST", "/api/v1/forward/create", {
+      name: "马来-腾讯 (容灾端口37846)",
+      tunnelId: tun2.id,
+      inPort: 21846,
+      remoteAddr: `127.0.0.1:${targetPort}`,
+      strategy: "fifo"
+    }, authHeaders);
+    assert.strictEqual(failoverFwdRes.json.code, 0);
+    await sleep(300);
+    const failoverEcho = await sendTcpPayload(21846, Buffer.from("CF_FAILOVER_PROBE_OK"));
+    assert.strictEqual(failoverEcho.toString(), "ECHO:CF_FAILOVER_PROBE_OK");
+    console.log("  ✅ 新版 UI 洁净度、PC/手机端响应式布局及容灾端口 TCP 探测全部验证通过！");
+
     console.log('\n================================================================');
-    console.log(' 🎉 ALL 9 E2E SIMULATION & STRESS TEST ROUNDS PASSED (100% OK)!');
+    console.log(' 🎉 ALL 10 E2E SIMULATION & STRESS TEST ROUNDS PASSED (100% OK)!');
     console.log('================================================================');
   } finally {
     if (targetEcho) targetEcho.close();

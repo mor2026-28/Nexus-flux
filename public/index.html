@@ -2,122 +2,138 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nexus-Flux · 极简轻量转发管理面板</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>flux</title>
   <style>
     :root {
-      --bg-body: #f4f6f9;
+      --bg-body: #f5f7fa;
       --bg-sidebar: #ffffff;
       --bg-topbar: #ffffff;
       --bg-card: #ffffff;
       --bg-subtle: #f8fafc;
+      --bg-box: #f4f6f8;
       --bg-input: #ffffff;
-      --text-main: #0f172a;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
-      --border-color: #e2e8f0;
+      --text-main: #111827;
+      --text-secondary: #4b5563;
+      --text-muted: #9ca3af;
+      --border-color: #e5e7eb;
+      --border-subtle: #eef0f4;
       --primary: #006fee;
       --primary-hover: #005bc4;
-      --primary-soft: #e6f1fe;
+      --primary-soft: #dcebff;
       --primary-text: #006fee;
+      --purple: #7828c8;
+      --purple-soft: #f2e8ff;
+      --purple-text: #7828c8;
       --success: #17c964;
-      --success-soft: #e8faf0;
+      --success-soft: #def7ec;
       --success-text: #0e793c;
       --warning: #f5a524;
-      --warning-soft: #fefce8;
+      --warning-soft: #fef3c7;
       --warning-text: #b45309;
       --danger: #f31260;
-      --danger-soft: #fee7ef;
+      --danger-soft: #fde2e8;
       --danger-text: #c20e4d;
-      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
-      --shadow-md: 0 4px 20px rgba(15, 23, 42, 0.08);
-      --radius-md: 12px;
-      --radius-lg: 16px;
+      --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.04);
+      --shadow-modal: 0 12px 36px rgba(0, 0, 0, 0.14);
+      --radius-card: 14px;
+      --radius-inner: 10px;
+      --radius-btn: 9px;
     }
 
     [data-theme="dark"] {
-      --bg-body: #0b0f19;
+      --bg-body: #0b0f17;
       --bg-sidebar: #111827;
       --bg-topbar: #111827;
-      --bg-card: #1e293b;
-      --bg-subtle: #0f172a;
+      --bg-card: #182232;
+      --bg-subtle: #111827;
+      --bg-box: #0f172a;
       --bg-input: #0f172a;
-      --text-main: #f8fafc;
-      --text-secondary: #cbd5e1;
-      --text-muted: #64748b;
-      --border-color: #334155;
+      --text-main: #f9fafb;
+      --text-secondary: #d1d5db;
+      --text-muted: #6b7280;
+      --border-color: #263347;
+      --border-subtle: #1e293b;
       --primary: #3b82f6;
       --primary-hover: #2563eb;
       --primary-soft: rgba(59, 130, 246, 0.18);
       --primary-text: #60a5fa;
+      --purple: #9333ea;
+      --purple-soft: rgba(147, 51, 234, 0.2);
+      --purple-text: #c084fc;
       --success: #22c55e;
-      --success-soft: rgba(34, 197, 94, 0.16);
+      --success-soft: rgba(34, 197, 94, 0.18);
       --success-text: #4ade80;
       --warning: #f59e0b;
-      --warning-soft: rgba(245, 158, 11, 0.16);
+      --warning-soft: rgba(245, 158, 11, 0.18);
       --warning-text: #fbbf24;
       --danger: #f43f5e;
       --danger-soft: rgba(244, 63, 94, 0.18);
       --danger-text: #fb7185;
-      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
-      --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.5);
+      --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.35);
+      --shadow-modal: 0 14px 40px rgba(0, 0, 0, 0.65);
     }
 
     * { box-sizing: border-box; }
-    body {
+    html, body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      padding: 0;
+      width: 100%;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       background: var(--bg-body);
       color: var(--text-main);
-      font-size: 14px;
+      font-size: 13.5px;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* 登录页 */
+    /* 登录视图 */
     .login-wrap {
       min-height: 100vh;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: radial-gradient(circle at top right, var(--primary-soft), var(--bg-body) 60%);
+      background: radial-gradient(circle at 80% 15%, var(--primary-soft), var(--bg-body) 55%);
     }
     .login-card {
       width: 100%;
-      max-width: 400px;
+      max-width: 390px;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 20px;
-      padding: 36px 32px;
-      box-shadow: var(--shadow-md);
+      border-radius: 18px;
+      padding: 34px 30px;
+      box-shadow: var(--shadow-modal);
     }
     .login-logo {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 24px;
+      margin-bottom: 26px;
     }
-    .login-logo-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #006fee, #38bdf8);
-      color: #fff;
+    .login-logo-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--text-main);
+      color: var(--bg-card);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-size: 20px;
+      font-weight: 900;
+      font-size: 18px;
     }
 
-    /* 主布局 */
+    /* 主框架：PC 全宽撑满 + 移动端侧滑抽屉 */
     .app-layout {
       display: flex;
+      width: 100%;
       min-height: 100vh;
     }
     .sidebar {
-      width: 220px;
+      width: 210px;
       background: var(--bg-sidebar);
       border-right: 1px solid var(--border-color);
       display: flex;
@@ -126,39 +142,31 @@
       top: 0;
       bottom: 0;
       left: 0;
-      z-index: 40;
+      z-index: 50;
+      transition: transform 0.25s ease;
     }
     .brand-header {
-      height: 64px;
+      height: 58px;
       padding: 0 20px;
       display: flex;
       align-items: center;
       gap: 10px;
-      border-bottom: 1px solid var(--border-color);
     }
-    .brand-icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: var(--text-main);
-      color: var(--bg-card);
+    .brand-logo {
+      font-weight: 900;
+      font-size: 17px;
+      letter-spacing: -0.3px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 14px;
-    }
-    .brand-title {
-      font-weight: 700;
-      font-size: 15px;
-      line-height: 1.2;
+      gap: 8px;
     }
     .brand-ver {
       font-size: 11px;
       color: var(--text-muted);
+      margin-top: -2px;
     }
     .nav-list {
-      padding: 14px 12px;
+      padding: 10px 12px;
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -167,11 +175,12 @@
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 11px 14px;
+      gap: 11px;
+      padding: 10px 14px;
       border-radius: 10px;
       color: var(--text-secondary);
       cursor: pointer;
+      font-size: 13.5px;
       font-weight: 500;
       transition: all 0.15s ease;
       user-select: none;
@@ -186,212 +195,392 @@
       font-weight: 600;
     }
     .nav-item svg {
-      width: 18px;
-      height: 18px;
+      width: 17px;
+      height: 17px;
       flex-shrink: 0;
+    }
+    .sidebar-footer {
+      padding: 14px 20px;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-subtle);
     }
 
     .main-area {
       flex: 1;
-      margin-left: 220px;
+      width: calc(100% - 210px);
+      margin-left: 210px;
       display: flex;
       flex-direction: column;
       min-width: 0;
     }
     .topbar {
-      height: 64px;
+      height: 56px;
+      width: 100%;
       background: var(--bg-topbar);
       border-bottom: 1px solid var(--border-color);
-      padding: 0 28px;
+      padding: 0 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
-      z-index: 30;
+      z-index: 35;
     }
     .topbar-left {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+    }
+    .mobile-menu-btn {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 17px;
     }
     .topbar-right {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
-    .ram-pill {
-      font-size: 12px;
-      padding: 5px 12px;
-      border-radius: 999px;
-      background: var(--success-soft);
-      color: var(--success-text);
+    .user-menu-btn {
+      background: none;
+      border: none;
+      color: var(--text-main);
       font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 8px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
     }
+    .user-menu-btn:hover { background: var(--bg-subtle); }
+
     .content-container {
-      padding: 24px 28px;
-      max-width: 1600px;
+      width: 100%;
+      padding: 20px 24px 36px;
     }
 
-    /* 通用按钮与表单 */
+    /* 顶部操作栏 */
+    .page-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+      width: 100%;
+    }
+    .page-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
+    /* 按钮系统 (贴合原版柔和色块风格) */
     .btn {
       border: none;
       outline: none;
-      padding: 8px 16px;
-      border-radius: 10px;
-      font-size: 13px;
+      padding: 7px 15px;
+      border-radius: var(--radius-btn);
+      font-size: 12.5px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 5px;
       transition: all 0.15s ease;
+      white-space: nowrap;
     }
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--primary); color: #ffffff; }
     .btn-primary:hover { background: var(--primary-hover); }
-    .btn-soft-primary {
-      background: var(--primary-soft);
-      color: var(--primary-text);
-    }
-    .btn-soft-primary:hover { filter: brightness(0.95); }
-    .btn-soft-success {
-      background: var(--success-soft);
-      color: var(--success-text);
-    }
-    .btn-soft-success:hover { filter: brightness(0.95); }
-    .btn-soft-danger {
-      background: var(--danger-soft);
-      color: var(--danger-text);
-    }
-    .btn-soft-danger:hover { filter: brightness(0.95); }
+    .btn-soft-blue { background: var(--primary-soft); color: var(--primary-text); }
+    .btn-soft-blue:hover { filter: brightness(0.95); }
+    .btn-soft-green { background: var(--success-soft); color: var(--success-text); }
+    .btn-soft-green:hover { filter: brightness(0.95); }
+    .btn-soft-amber { background: var(--warning-soft); color: var(--warning-text); }
+    .btn-soft-amber:hover { filter: brightness(0.95); }
+    .btn-soft-pink { background: var(--danger-soft); color: var(--danger-text); }
+    .btn-soft-pink:hover { filter: brightness(0.95); }
     .btn-ghost {
-      background: var(--bg-subtle);
+      background: var(--bg-box);
       color: var(--text-secondary);
       border: 1px solid var(--border-color);
     }
     .btn-ghost:hover { color: var(--text-main); }
-    .btn-sm {
-      padding: 6px 12px;
-      font-size: 12px;
-      border-radius: 8px;
-    }
 
-    .input, .select, .textarea {
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border-color);
-      background: var(--bg-input);
-      color: var(--text-main);
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.15s;
-      font-family: inherit;
-    }
-    .input:focus, .select:focus, .textarea:focus {
-      border-color: var(--primary);
-    }
-    .form-group {
-      margin-bottom: 16px;
-    }
-    .form-label {
-      display: block;
-      font-size: 12px;
+    /* 徽章标签 */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 9px;
+      border-radius: 6px;
+      font-size: 11.5px;
       font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 6px;
+      line-height: 1.4;
     }
-    .form-hint {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
+    .badge-blue { background: var(--primary-soft); color: var(--primary-text); }
+    .badge-purple { background: var(--purple-soft); color: var(--purple-text); }
+    .badge-green { background: var(--success-soft); color: var(--success-text); }
+    .badge-amber { background: var(--warning-soft); color: var(--warning-text); }
+    .badge-pink { background: var(--danger-soft); color: var(--danger-text); }
 
-    /* 网格与卡片 */
-    .stats-grid {
+    /* 1. 仪表板样式 (1:1 对应原版 Dashboard) */
+    .dash-top-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 16px;
-      margin-bottom: 24px;
+      width: 100%;
+      margin-bottom: 18px;
     }
-    .stat-card {
+    .dash-stat-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-    .stat-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-    .stat-value {
-      font-size: 24px;
-      font-weight: 800;
-      margin-top: 8px;
-      color: var(--text-main);
-    }
-    .stat-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
-
-    /* 节点卡片网格 (1:1 还原截图样式) */
-    .node-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-      gap: 18px;
-    }
-    .node-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: 18px;
-      box-shadow: var(--shadow-sm);
+      border-radius: var(--radius-card);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-card);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      justify-content: space-between;
+      min-height: 112px;
     }
-    .node-card-header {
+    .dash-stat-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-secondary);
+      font-size: 12.5px;
+    }
+    .dash-stat-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .dash-stat-val {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 6px 0;
+    }
+    .dash-stat-bar {
+      height: 5px;
+      width: 100%;
+      background: linear-gradient(90deg, #6366f1, #a855f7);
+      border-radius: 999px;
+      margin: 4px 0;
+    }
+    .dash-stat-foot {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .dash-section-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+      width: 100%;
+      margin-bottom: 18px;
+    }
+    .dash-section-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .dash-tunnel-group {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      background: var(--bg-card);
+    }
+    .dash-tunnel-group:last-child { margin-bottom: 0; }
+    .dash-tunnel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .dash-fwd-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(275px, 1fr));
+      gap: 14px;
+    }
+    .dash-fwd-box {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      background: var(--bg-card);
+    }
+    .dash-addr-in {
+      background: var(--success-soft);
+      color: var(--success-text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dash-addr-out {
+      background: var(--primary-soft);
+      color: var(--primary-text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dash-metrics-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      text-align: center;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 11.5px;
+    }
+
+    /* 2. 转发管理 & 隧道管理 & 限速管理 卡片网格 (1:1 对应原版卡片) */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+    .item-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .item-card-head {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
+      gap: 8px;
     }
-    .node-title {
+    .item-card-title {
       font-weight: 700;
-      font-size: 15px;
+      font-size: 14.5px;
       color: var(--text-main);
     }
-    .node-subip {
+    .item-card-sub {
       font-size: 12px;
       color: var(--text-muted);
       margin-top: 2px;
     }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
+    .gray-info-bar {
+      background: var(--bg-box);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: border-color 0.15s;
     }
-    .badge-online { background: var(--success-soft); color: var(--success-text); }
-    .badge-offline { background: var(--danger-soft); color: var(--danger-text); }
-    .badge-primary { background: var(--primary-soft); color: var(--primary-text); }
-    .badge-warning { background: var(--warning-soft); color: var(--warning-text); }
+    .gray-info-bar:hover {
+      border-color: var(--primary);
+      color: var(--text-main);
+    }
+    .tunnel-node-box {
+      background: var(--bg-box);
+      border: 1px solid var(--border-subtle);
+      border-radius: 9px;
+      padding: 10px 12px;
+    }
+    .tunnel-node-label {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+    .tunnel-node-name {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text-main);
+      margin-top: 2px;
+    }
+    .tunnel-node-ip {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .pills-row-3 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .card-btn-row-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 4px;
+    }
 
+    /* 3. 节点监控 5 列自适应网格 (1:1 对应原版 Node 页面) */
+    .node-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(275px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+    .node-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
     .kv-row {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-size: 12.5px;
       color: var(--text-secondary);
     }
@@ -399,7 +588,7 @@
       font-weight: 600;
       color: var(--text-main);
       text-align: right;
-      max-width: 65%;
+      max-width: 68%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -408,24 +597,20 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-    }
-    .meter-box {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      margin-top: 2px;
     }
     .meter-head {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--text-secondary);
+      margin-bottom: 4px;
     }
     .progress-track {
-      height: 6px;
-      background: var(--bg-subtle);
+      height: 5px;
+      background: var(--bg-box);
       border-radius: 999px;
       overflow: hidden;
-      border: 1px solid var(--border-color);
     }
     .progress-bar {
       height: 100%;
@@ -436,79 +621,122 @@
     .speed-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 8px;
     }
-    .speed-cell {
-      background: var(--bg-subtle);
+    .speed-box {
+      background: var(--bg-box);
       border-radius: 8px;
-      padding: 8px;
+      padding: 7px 6px;
       text-align: center;
-      font-size: 12px;
     }
-    .speed-cell-label { color: var(--text-muted); font-size: 11px; }
-    .speed-cell-val { font-weight: 700; color: var(--text-main); margin-top: 2px; }
-
-    .flow-cell-up {
+    .speed-box-label { font-size: 11px; color: var(--text-muted); }
+    .speed-box-val { font-size: 12px; font-weight: 700; color: var(--text-main); margin-top: 2px; }
+    .flow-box-up {
       background: var(--primary-soft);
       border: 1px solid rgba(0, 111, 238, 0.2);
       color: var(--primary-text);
       border-radius: 8px;
-      padding: 8px;
+      padding: 7px 6px;
       text-align: center;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 600;
     }
-    .flow-cell-down {
+    .flow-box-down {
       background: var(--success-soft);
       border: 1px solid rgba(23, 201, 100, 0.25);
       color: var(--success-text);
       border-radius: 8px;
-      padding: 8px;
+      padding: 7px 6px;
       text-align: center;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 600;
     }
-    .card-actions-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
-      margin-top: 4px;
+
+    /* 表单与输入框 */
+    .input, .select, .textarea {
+      width: 100%;
+      padding: 9px 13px;
+      border-radius: 9px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-input);
+      color: var(--text-main);
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
     }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--primary); }
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+    .form-hint { font-size: 11.5px; color: var(--text-muted); margin-top: 4px; }
+
+    /* 开关 Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 21px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: var(--text-muted);
+      transition: .2s;
+      border-radius: 21px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 15px;
+      width: 15px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(17px); }
 
     /* 模态弹窗 */
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(3px);
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(2px);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 100;
-      padding: 20px;
+      padding: 16px;
     }
     .modal-panel {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 18px;
+      border-radius: 16px;
       width: 100%;
-      max-width: 580px;
+      max-width: 540px;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: var(--shadow-md);
-      padding: 24px;
+      box-shadow: var(--shadow-modal);
+      padding: 22px 24px;
     }
     .modal-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
-    .modal-title {
-      font-size: 17px;
-      font-weight: 700;
-      margin: 0;
-    }
+    .modal-title { font-size: 16px; font-weight: 700; margin: 0; }
     .modal-close {
       background: none;
       border: none;
@@ -520,152 +748,90 @@
       display: flex;
       justify-content: flex-end;
       gap: 10px;
-      margin-top: 22px;
+      margin-top: 20px;
     }
 
-    /* 协议屏蔽三列卡片 */
     .proto-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      padding: 12px;
+      padding: 10px;
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      background: var(--bg-subtle);
+      border-radius: 10px;
+      background: var(--bg-box);
     }
     .proto-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 12px;
+      border-radius: 8px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
-    .proto-card-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    /* 提示横幅 */
     .alert-box {
-      padding: 12px 14px;
-      border-radius: 10px;
-      font-size: 12.5px;
-      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      font-size: 12px;
+      margin-top: 10px;
       display: flex;
       align-items: flex-start;
-      gap: 10px;
+      gap: 8px;
       line-height: 1.5;
     }
     .alert-danger { background: var(--danger-soft); color: var(--danger-text); }
     .alert-info { background: var(--primary-soft); color: var(--primary-text); }
-    .alert-warning { background: var(--warning-soft); color: var(--warning-text); }
-
-    /* 开关组件 */
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 42px;
-      height: 24px;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background-color: var(--text-muted);
-      transition: .2s;
-      border-radius: 24px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .2s;
-      border-radius: 50%;
-    }
-    input:checked + .slider { background-color: var(--primary); }
-    input:checked + .slider:before { transform: translateX(18px); }
-
-    /* 表格与转发列表 */
-    .panel-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 20px;
-    }
-    .toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-    th {
-      padding: 12px 14px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border-color);
-      background: var(--bg-subtle);
-    }
-    td {
-      padding: 13px 14px;
-      border-bottom: 1px solid var(--border-color);
-      font-size: 13.5px;
-      vertical-align: middle;
-    }
-    tr:last-child td { border-bottom: none; }
-    .addr-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 8px;
-      background: var(--bg-subtle);
-      border: 1px solid var(--border-color);
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .addr-chip:hover { border-color: var(--primary); color: var(--primary-text); }
 
     .code-box {
-      background: var(--bg-subtle);
+      background: var(--bg-box);
       border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 14px;
+      border-radius: 10px;
+      padding: 12px;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 12.5px;
+      font-size: 12px;
       word-break: break-all;
       line-height: 1.6;
-      position: relative;
+    }
+
+    /* 列表视图表格 */
+    .table-wrap { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th {
+      padding: 11px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-box);
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 13px;
+    }
+
+    .empty-state {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: 56px 20px;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* 移动端抽屉遮罩 */
+    .drawer-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 45;
     }
 
     .toast-container {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: 16px;
+      right: 16px;
       z-index: 9999;
       display: flex;
       flex-direction: column;
@@ -676,18 +842,55 @@
       color: var(--text-main);
       border: 1px solid var(--border-color);
       border-left: 4px solid var(--primary);
-      padding: 12px 18px;
-      border-radius: 10px;
-      box-shadow: var(--shadow-md);
+      padding: 10px 16px;
+      border-radius: 9px;
+      box-shadow: var(--shadow-modal);
       font-weight: 600;
-      font-size: 13px;
+      font-size: 12.5px;
     }
 
-    @media (max-width: 860px) {
-      .sidebar { position: static; width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
-      .nav-list { flex-direction: row; overflow-x: auto; padding: 8px 12px; }
-      .app-layout { flex-direction: column; }
-      .main-area { margin-left: 0; }
+    /* 响应式适配：平板与手机端优化 */
+    @media (max-width: 1100px) {
+      .dash-top-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 820px) {
+      .sidebar {
+        transform: translateX(-100%);
+        width: 230px;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .drawer-backdrop.open {
+        display: block;
+      }
+      .main-area {
+        width: 100%;
+        margin-left: 0;
+      }
+      .mobile-menu-btn {
+        display: inline-flex;
+      }
+      .topbar {
+        padding: 0 14px;
+      }
+      .content-container {
+        padding: 14px 14px 28px;
+      }
+      .dash-top-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .cards-grid, .node-grid, .dash-fwd-grid {
+        grid-template-columns: 1fr;
+      }
+      .proto-grid {
+        grid-template-columns: 1fr;
+      }
+      .modal-panel {
+        padding: 18px 16px;
+        max-height: 92vh;
+      }
     }
   </style>
 </head>
@@ -696,18 +899,18 @@
   <div id="app"></div>
 
   <script>
-    // ======================= 全局状态 =======================
     const state = {
       token: localStorage.getItem('flux_token') || '',
       username: localStorage.getItem('flux_user') || 'admin_user',
       theme: localStorage.getItem('flux_theme') || 'light',
-      activeTab: localStorage.getItem('flux_tab') || 'node', // 默认贴合截图展示或记忆上次标签
+      activeTab: localStorage.getItem('flux_tab') || 'dashboard',
+      forwardViewMode: localStorage.getItem('flux_fwd_view') || 'card', // 'card' | 'list'
+      drawerOpen: false,
       searchQuery: '',
       dashboard: {
         userInfo: { inFlow: 0, outFlow: 0 },
-        nodeSummary: { total: 0, online: 0, offline: 0, totalUpSpeed: 0, totalDownSpeed: 0 },
-        tunnelSummary: { total: 0, portForwards: 0, tunnelForwards: 0 },
-        systemMemory: { rssMB: 19.2, heapMB: 9.5, hostFreeMB: 200, hostTotalMB: 512 },
+        nodeSummary: { total: 0, online: 0, offline: 0 },
+        tunnelSummary: { total: 0 },
         forwards: [],
         statisticsFlows: []
       },
@@ -716,7 +919,7 @@
       forwards: [],
       speedLimits: [],
       configs: {
-        app_name: 'Nexus-Flux',
+        app_name: 'flux',
         ip: '',
         panel_domain: '',
         block_ip_access: 'false',
@@ -735,7 +938,7 @@
       if (type === 'success') el.style.borderLeftColor = 'var(--success)';
       el.textContent = msg;
       area.appendChild(el);
-      setTimeout(() => el.remove(), 3200);
+      setTimeout(() => el.remove(), 3000);
     }
 
     function formatBytes(bytes) {
@@ -780,14 +983,14 @@
       });
       if (resp.status === 401) {
         logout();
-        throw new Error('登录已过期');
+        throw new Error('Unauthorized');
       }
       return await resp.json();
     }
 
-    function copyText(text, label = '内容') {
+    function copyText(text, label = '地址') {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => showToast(`已复制${label}`, 'success'));
+        navigator.clipboard.writeText(text).then(() => showToast(`已复制${label}: ${text}`, 'success'));
       } else {
         const ta = document.createElement('textarea');
         ta.value = text;
@@ -795,7 +998,7 @@
         ta.select();
         document.execCommand('copy');
         ta.remove();
-        showToast(`已复制${label}`, 'success');
+        showToast(`已复制${label}: ${text}`, 'success');
       }
     }
 
@@ -806,11 +1009,23 @@
       renderApp();
     }
 
+    function toggleDrawer(force) {
+      state.drawerOpen = typeof force === 'boolean' ? force : !state.drawerOpen;
+      renderApp();
+    }
+
     function switchTab(tab) {
       state.activeTab = tab;
+      state.drawerOpen = false;
       localStorage.setItem('flux_tab', tab);
       renderApp();
       refreshActiveTabData();
+    }
+
+    function toggleForwardViewMode() {
+      state.forwardViewMode = state.forwardViewMode === 'card' ? 'list' : 'card';
+      localStorage.setItem('flux_fwd_view', state.forwardViewMode);
+      renderApp();
     }
 
     function logout() {
@@ -823,7 +1038,7 @@
       renderApp();
     }
 
-    // ======================= WebSocket 实时节点状态监控 =======================
+    // ======================= WebSocket 实时监控 =======================
     function initRealtimeWs() {
       if (!state.token || state.ws) return;
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -839,7 +1054,9 @@
             if (!targetNode) return;
             if (msg.type === 'status') {
               targetNode.status = Number(msg.data) === 1 ? 1 : 0;
-              if (state.activeTab === 'node' || state.activeTab === 'dashboard') renderApp();
+              if ((state.activeTab === 'node' || state.activeTab === 'dashboard') && !document.querySelector('.modal-backdrop')) {
+                renderApp();
+              }
             } else if (msg.type === 'info') {
               const info = typeof msg.data === 'string' ? JSON.parse(msg.data) : msg.data;
               const now = Date.now();
@@ -889,7 +1106,10 @@
           apiPost('/forward/list'),
           apiPost('/speed-limit/list')
         ]);
-        if (cfgRes.code === 0 && cfgRes.data) state.configs = Object.assign(state.configs, cfgRes.data);
+        if (cfgRes.code === 0 && cfgRes.data) {
+          state.configs = Object.assign(state.configs, cfgRes.data);
+          document.title = state.configs.app_name || 'flux';
+        }
         if (pkgRes.code === 0 && pkgRes.data) state.dashboard = Object.assign(state.dashboard, pkgRes.data);
         if (nodeRes.code === 0 && Array.isArray(nodeRes.data)) state.nodes = nodeRes.data;
         if (tunRes.code === 0 && Array.isArray(tunRes.data)) state.tunnels = tunRes.data;
@@ -899,7 +1119,7 @@
       } catch (e) {}
     }
 
-    // ======================= 页面渲染主入口 =======================
+    // ======================= 主界面渲染 =======================
     function renderApp() {
       const root = document.getElementById('app');
       if (!state.token) {
@@ -907,39 +1127,44 @@
         return;
       }
 
-      const appName = escapeHtml(state.configs.app_name || 'Nexus-Flux');
-      const rssMB = (state.dashboard.systemMemory && state.dashboard.systemMemory.rssMB) || 19.2;
+      const appName = escapeHtml(state.configs.app_name || 'flux');
 
       root.innerHTML = `
         <div class="app-layout">
-          <aside class="sidebar">
+          <div class="drawer-backdrop ${state.drawerOpen ? 'open' : ''}" onclick="toggleDrawer(false)"></div>
+          <aside class="sidebar ${state.drawerOpen ? 'open' : ''}">
             <div class="brand-header">
-              <div class="brand-icon">▲</div>
               <div>
-                <div class="brand-title">${appName}</div>
-                <div class="brand-ver">v1.4.3 · 轻量专享版</div>
+                <div class="brand-logo">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 21h20L12 2zm0 5.8L17.5 18h-11L12 7.8z"/></svg>
+                  <span>${appName}</span>
+                </div>
+                <div class="brand-ver">v1.4.3</div>
               </div>
             </div>
             <nav class="nav-list">
-              ${renderNavItem('dashboard', '仪表板', '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>')}
-              ${renderNavItem('forward', '转发管理', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>')}
+              ${renderNavItem('dashboard', '仪表板', '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>')}
+              ${renderNavItem('forward', '转发管理', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>')}
               ${renderNavItem('tunnel', '隧道管理', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>')}
-              ${renderNavItem('node', '节点监控', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><circle cx="6" cy="6.5" r="1"/><circle cx="6" cy="17.5" r="1"/></svg>')}
-              ${renderNavItem('limit', '限速管理', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>')}
-              ${renderNavItem('config', '网站配置', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>')}
+              ${renderNavItem('node', '节点监控', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 13l3-3 2 2 4-4M8 21h8"/></svg>')}
+              ${renderNavItem('limit', '限速管理', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>')}
+              ${renderNavItem('config', '网站配置', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>')}
             </nav>
+            <div class="sidebar-footer">Powered by flux-panel</div>
           </aside>
 
           <div class="main-area">
             <header class="topbar">
               <div class="topbar-left">
-                <span class="ram-pill">🍃 主控常驻内存: ${rssMB} MB (无Java/无Docker)</span>
-                ${state.configs.block_ip_access === 'true' ? '<span class="badge badge-online">🔒 已锁定仅域名访问</span>' : ''}
+                <button class="mobile-menu-btn" onclick="toggleDrawer()">☰</button>
               </div>
               <div class="topbar-right">
-                <button class="btn btn-ghost btn-sm" onclick="toggleTheme()">${state.theme === 'light' ? '🌙 暗色' : '☀️ 亮色'}</button>
-                <button class="btn btn-ghost btn-sm" onclick="openPasswordModal()">👤 ${escapeHtml(state.username)}</button>
-                <button class="btn btn-soft-danger btn-sm" onclick="logout()">退出</button>
+                <button class="btn btn-ghost" style="padding:5px 10px" onclick="toggleTheme()" title="切换明暗主题">${state.theme === 'light' ? '🌙' : '☀️'}</button>
+                <button class="user-menu-btn" onclick="openPasswordModal()">
+                  <span>${escapeHtml(state.username)}</span>
+                  <span style="font-size:10px;color:var(--text-muted)">▼</span>
+                </button>
+                <button class="btn btn-soft-pink" style="padding:5px 11px" onclick="logout()">退出</button>
               </div>
             </header>
 
@@ -962,22 +1187,22 @@
         <div class="login-wrap">
           <div class="login-card">
             <div class="login-logo">
-              <div class="login-logo-icon">▲</div>
+              <div class="login-logo-mark">▲</div>
               <div>
-                <div style="font-size:18px;font-weight:800">${escapeHtml(state.configs.app_name || 'Nexus-Flux')}</div>
-                <div style="font-size:12px;color:var(--text-muted)">极简轻量转发与隧道中枢 · v1.4.3</div>
+                <div style="font-size:18px;font-weight:800">${escapeHtml(state.configs.app_name || 'flux')}</div>
+                <div style="font-size:12px;color:var(--text-muted)">v1.4.3</div>
               </div>
             </div>
             <form onsubmit="handleLoginSubmit(event)">
               <div class="form-group">
-                <label class="form-label">管理员账号</label>
-                <input id="loginUser" class="input" type="text" value="admin_user" required />
+                <label class="form-label">用户名</label>
+                <input id="loginUser" class="input" type="text" placeholder="请输入管理员账号" value="admin_user" required />
               </div>
               <div class="form-group">
-                <label class="form-label">登录密码</label>
-                <input id="loginPwd" class="input" type="password" placeholder="请输入管理员密码 (默认 admin_user)" required />
+                <label class="form-label">密码</label>
+                <input id="loginPwd" class="input" type="password" placeholder="请输入密码" required />
               </div>
-              <button class="btn btn-primary" style="width:100%;padding:11px;margin-top:8px" type="submit">立即登录</button>
+              <button class="btn btn-primary" style="width:100%;padding:10px;margin-top:8px" type="submit">登录</button>
             </form>
           </div>
         </div>
@@ -995,7 +1220,6 @@
           state.username = res.data.name || username;
           localStorage.setItem('flux_token', state.token);
           localStorage.setItem('flux_user', state.username);
-          showToast('登录成功', 'success');
           initRealtimeWs();
           await refreshActiveTabData();
           renderApp();
@@ -1003,7 +1227,7 @@
           showToast(res.msg || '用户名或密码错误', 'error');
         }
       } catch (err) {
-        showToast('登录请求失败', 'error');
+        showToast('登录失败', 'error');
       }
     }
 
@@ -1015,89 +1239,211 @@
         case 'node': return renderNodeTab();
         case 'limit': return renderLimitTab();
         case 'config': return renderConfigTab();
-        default: return renderNodeTab();
+        default: return renderDashboardTab();
       }
     }
 
-    // ======================= 1. 仪表板视图 =======================
+    // ======================= 1. 仪表板 (1:1 对应原版 Dashboard) =======================
     function renderDashboardTab() {
       const d = state.dashboard;
       const inFlow = (d.userInfo && d.userInfo.inFlow) || 0;
       const outFlow = (d.userInfo && d.userInfo.outFlow) || 0;
-      const totalFlow = inFlow + outFlow;
-      const onlineNodes = state.nodes.filter(n => Number(n.status) === 1).length;
-      const activeForwards = state.forwards.filter(f => Number(f.status) === 1).length;
+      const totalUsedFlow = inFlow + outFlow;
+
+      // 按隧道分组转发配置
+      const tunnelMap = new Map();
+      for (const f of state.forwards) {
+        const tid = Number(f.tunnelId);
+        if (!tunnelMap.has(tid)) {
+          tunnelMap.set(tid, {
+            tunnelId: tid,
+            tunnelName: f.tunnelName || ('隧道#' + tid),
+            forwards: []
+          });
+        }
+        tunnelMap.get(tid).forwards.push(f);
+      }
+      const tunnelGroups = Array.from(tunnelMap.values());
 
       return `
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">在线节点 / 总节点</div>
-            <div class="stat-value">${onlineNodes} <span style="font-size:15px;color:var(--text-muted);font-weight:500">/ ${state.nodes.length}</span></div>
-            <div class="stat-sub">实时连接状态自动同步</div>
+        <div class="dash-top-grid">
+          <div class="dash-stat-card">
+            <div class="dash-stat-head">
+              <span>总流量</span>
+              <span class="dash-stat-icon badge-blue">⊞</span>
+            </div>
+            <div class="dash-stat-val">无限制</div>
+            <div class="dash-stat-foot"><span>&nbsp;</span></div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">活跃转发 / 隧道总数</div>
-            <div class="stat-value">${activeForwards} <span style="font-size:15px;color:var(--text-muted);font-weight:500">/ ${state.tunnels.length} 隧道</span></div>
-            <div class="stat-sub">端口直转 + 加密隧道转发</div>
+
+          <div class="dash-stat-card">
+            <div class="dash-stat-head">
+              <span>已用流量</span>
+              <span class="dash-stat-icon badge-green">↗</span>
+            </div>
+            <div class="dash-stat-val">${formatBytes(totalUsedFlow)}</div>
+            <div class="dash-stat-bar"></div>
+            <div class="dash-stat-foot">
+              <span>无限制</span>
+              <span style="cursor:pointer;color:var(--primary-text)" onclick="resetAllTraffic()">↻ 清零统计</span>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">累计转发总流量</div>
-            <div class="stat-value">${formatBytes(totalFlow)}</div>
-            <div class="stat-sub">↑ 上传 ${formatBytes(outFlow)} · ↓ 下载 ${formatBytes(inFlow)}</div>
+
+          <div class="dash-stat-card">
+            <div class="dash-stat-head">
+              <span>转发配额</span>
+              <span class="dash-stat-icon badge-purple">↓</span>
+            </div>
+            <div class="dash-stat-val">无限制</div>
+            <div class="dash-stat-foot"><span>在线节点: ${state.nodes.filter(n => Number(n.status) === 1).length} / ${state.nodes.length}</span></div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">主控资源占用 (华为云 SG 优化)</div>
-            <div class="stat-value">${(d.systemMemory && d.systemMemory.rssMB) || 19.2} MB</div>
-            <div class="stat-sub">宿主机空闲内存: ${(d.systemMemory && d.systemMemory.hostFreeMB) || '-'} MB / ${(d.systemMemory && d.systemMemory.hostTotalMB) || '-'} MB</div>
+
+          <div class="dash-stat-card">
+            <div class="dash-stat-head">
+              <span>已用转发</span>
+              <span class="dash-stat-icon badge-amber">🔗</span>
+            </div>
+            <div class="dash-stat-val">${state.forwards.length}</div>
+            <div class="dash-stat-bar"></div>
+            <div class="dash-stat-foot">
+              <span>无限制</span>
+              <span>活跃隧道: ${state.tunnels.length}</span>
+            </div>
           </div>
         </div>
 
-        <div class="panel-card">
-          <div class="toolbar">
-            <div style="font-weight:700;font-size:15px">⚡ 转发规则快速总览</div>
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-soft-primary btn-sm" onclick="switchTab('forward')">管理全部转发</button>
-              <button class="btn btn-soft-danger btn-sm" onclick="resetAllTraffic()">清零总流量</button>
-            </div>
+        <div class="dash-section-card">
+          <div class="dash-section-title">
+            <span style="color:var(--primary)">🕒</span>
+            <span>24小时流量统计</span>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>转发名称</th>
-                  <th>所属隧道</th>
-                  <th>入口连接地址 (点击复制)</th>
-                  <th>目标地址</th>
-                  <th>累计上行</th>
-                  <th>累计下行</th>
-                  <th>状态</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${state.forwards.length === 0 ? `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px">暂无转发规则，请前往「转发管理」添加</td></tr>` : state.forwards.map(f => {
-                  const firstIp = String(f.inIp || '').split(/[\n,]+/)[0] || '';
-                  const entryAddr = `${firstIp}:${f.inPort}`;
+          ${render24hChartSvg()}
+        </div>
+
+        <div class="dash-section-card">
+          <div class="dash-section-title">
+            <span style="color:var(--primary)">↓</span>
+            <span>转发配置</span>
+            <span class="badge" style="background:var(--bg-box);color:var(--text-secondary)">${state.forwards.length}</span>
+          </div>
+          ${tunnelGroups.length === 0 ? `
+            <div style="text-align:center;color:var(--text-muted);padding:32px 0">暂无转发配置</div>
+          ` : tunnelGroups.map(g => `
+            <div class="dash-tunnel-group">
+              <div class="dash-tunnel-head">
+                <span>${escapeHtml(g.tunnelName)}</span>
+                <span class="badge badge-blue">${g.forwards.length} 个转发</span>
+              </div>
+              <div class="dash-fwd-grid">
+                ${g.forwards.map(f => {
+                  const firstInIp = String(f.inIp || '').split(/[\n,]+/)[0] || '0.0.0.0';
+                  const entryAddr = `${firstInIp}:${f.inPort}`;
+                  const billable = (Number(f.outFlow) || 0) + (Number(f.inFlow) || 0);
                   return `
-                    <tr>
-                      <td style="font-weight:600">${escapeHtml(f.name)}</td>
-                      <td><span class="badge badge-primary">${escapeHtml(f.tunnelName || '-')}</span></td>
-                      <td><span class="addr-chip" onclick="copyText('${escapeHtml(entryAddr)}', '入口地址')">📋 ${escapeHtml(entryAddr)}</span></td>
-                      <td style="font-family:monospace;font-size:12px">${escapeHtml(f.remoteAddr)}</td>
-                      <td>${formatBytes(f.outFlow)}</td>
-                      <td>${formatBytes(f.inFlow)}</td>
-                      <td>${Number(f.status) === 1 ? '<span class="badge badge-online">运行中</span>' : '<span class="badge badge-offline">已暂停</span>'}</td>
-                    </tr>
+                    <div class="dash-fwd-box">
+                      <div style="font-weight:700;margin-bottom:10px;font-size:13.5px">${escapeHtml(f.name)}</div>
+                      <div class="dash-addr-in" onclick="copyText('${escapeHtml(entryAddr)}', '入口地址')">${escapeHtml(entryAddr)}</div>
+                      <div style="text-align:center;color:var(--text-muted);font-size:12px;margin:4px 0">↓</div>
+                      <div class="dash-addr-out" onclick="copyText('${escapeHtml(f.remoteAddr)}', '目标地址')">${escapeHtml(f.remoteAddr)}</div>
+                      <div class="dash-metrics-3">
+                        <div>
+                          <div style="color:var(--text-muted)">上传</div>
+                          <div style="color:var(--success-text);font-weight:700;margin-top:2px">${formatBytes(f.outFlow)}</div>
+                        </div>
+                        <div>
+                          <div style="color:var(--text-muted)">下载</div>
+                          <div style="color:var(--warning-text);font-weight:700;margin-top:2px">${formatBytes(f.inFlow)}</div>
+                        </div>
+                        <div>
+                          <div style="color:var(--text-muted)">计费</div>
+                          <div style="color:var(--primary-text);font-weight:700;margin-top:2px">${formatBytes(billable)}</div>
+                        </div>
+                      </div>
+                    </div>
                   `;
                 }).join('')}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function render24hChartSvg() {
+      const nowHour = new Date().getHours();
+      const hours = [];
+      for (let i = 23; i >= 0; i--) {
+        const h = (nowHour - i + 24) % 24;
+        hours.push(String(h).padStart(2, '0') + ':00');
+      }
+
+      const rawStats = Array.isArray(state.dashboard.statisticsFlows) ? state.dashboard.statisticsFlows : [];
+      const values = hours.map((hLabel, idx) => {
+        const match = rawStats.find(s => String(s.time || '').endsWith(hLabel));
+        if (match) return Number(match.flow) || 0;
+        if (idx === 23) {
+          return (Number(state.dashboard.userInfo && state.dashboard.userInfo.inFlow) || 0) +
+                 (Number(state.dashboard.userInfo && state.dashboard.userInfo.outFlow) || 0);
+        }
+        return 0;
+      });
+
+      const maxVal = Math.max(1024 * 1024, ...values);
+      const width = 1200;
+      const height = 230;
+      const padLeft = 58;
+      const padRight = 20;
+      const padTop = 16;
+      const padBottom = 30;
+      const plotW = width - padLeft - padRight;
+      const plotH = height - padTop - padBottom;
+
+      const pts = values.map((v, i) => {
+        const x = padLeft + (i / 23) * plotW;
+        const y = padTop + plotH - Math.min(1, v / maxVal) * plotH;
+        return { x, y, v, label: hours[i] };
+      });
+
+      let pathD = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i];
+        const p1 = pts[i + 1];
+        const cx = ((p0.x + p1.x) / 2).toFixed(1);
+        pathD += ` C ${cx} ${p0.y.toFixed(1)}, ${cx} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+      }
+      const areaD = `${pathD} L ${pts[pts.length - 1].x.toFixed(1)} ${padTop + plotH} L ${pts[0].x.toFixed(1)} ${padTop + plotH} Z`;
+
+      const yTicks = [1, 0.75, 0.5, 0.25, 0].map(r => ({
+        y: padTop + (1 - r) * plotH,
+        label: r === 0 ? '0' : formatBytes(maxVal * r)
+      }));
+
+      return `
+        <div style="width:100%;overflow:hidden">
+          <svg viewBox="0 0 ${width} ${height}" style="width:100%;height:230px;display:block">
+            <defs>
+              <linearGradient id="fluxAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.22"/>
+                <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.0"/>
+              </linearGradient>
+            </defs>
+            ${yTicks.map(t => `
+              <line x1="${padLeft}" y1="${t.y}" x2="${width - padRight}" y2="${t.y}" stroke="var(--border-color)" stroke-dasharray="3 3" stroke-width="1"/>
+              <text x="${padLeft - 8}" y="${t.y + 4}" text-anchor="end" font-size="11" fill="var(--text-muted)">${t.label}</text>
+            `).join('')}
+            ${pts.map((p, i) => `
+              <line x1="${p.x}" y1="${padTop}" x2="${p.x}" y2="${padTop + plotH}" stroke="var(--border-subtle)" stroke-dasharray="2 4" stroke-width="1"/>
+              <text x="${p.x}" y="${height - 8}" text-anchor="middle" font-size="10.5" fill="var(--text-muted)">${p.label}</text>
+            `).join('')}
+            <path d="${areaD}" fill="url(#fluxAreaGrad)"/>
+            <path d="${pathD}" fill="none" stroke="#8b5cf6" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
         </div>
       `;
     }
 
     async function resetAllTraffic() {
-      if (!confirm('确认清零所有转发规则的累计流量统计吗？')) return;
+      if (!confirm('确认清零所有转发的累计流量统计吗？')) return;
       const res = await apiPost('/user/reset', { id: 1, type: 0 });
       if (res.code === 0) {
         showToast('流量统计已清零', 'success');
@@ -1105,18 +1451,219 @@
       }
     }
 
-    // ======================= 2. 节点监控视图 (1:1 贴合截图卡片设计) =======================
+    // ======================= 2. 转发管理 (1:1 还原截图卡片网格 + 列表切换) =======================
+    function renderForwardTab() {
+      const q = (state.searchQuery || '').toLowerCase();
+      const filtered = state.forwards.filter(f => {
+        if (!q) return true;
+        return String(f.name || '').toLowerCase().includes(q) ||
+               String(f.remoteAddr || '').toLowerCase().includes(q) ||
+               String(f.inPort || '').includes(q) ||
+               String(f.tunnelName || '').toLowerCase().includes(q);
+      });
+
+      const stratMap = { fifo: '主备', round: '轮询', rand: '随机', hash: '哈希' };
+
+      return `
+        <div class="page-toolbar">
+          <div style="display:flex;align-items:center;gap:10px;flex:1;max-width:320px">
+            <input class="input" style="padding:7px 12px" placeholder="🔍 搜索转发名称 / 端口 / 地址..." value="${escapeHtml(state.searchQuery)}" oninput="state.searchQuery=this.value;renderApp()" />
+          </div>
+          <div class="page-toolbar-right">
+            <button class="btn btn-ghost" onclick="toggleForwardViewMode()" title="切换卡片/列表视图">⊞</button>
+            <label class="btn btn-soft-amber" style="cursor:pointer">
+              导入
+              <input type="file" accept=".json,.sql" style="display:none" onchange="handleImportBackupFile(event)" />
+            </label>
+            <button class="btn btn-soft-green" onclick="handleExportBackup()">导出</button>
+            <button class="btn btn-soft-blue" onclick="openForwardModal()">新增</button>
+          </div>
+        </div>
+
+        ${filtered.length === 0 ? `
+          <div class="empty-state">
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">暂无转发数据</div>
+            <div style="color:var(--text-muted);margin-bottom:16px">还没有创建任何转发规则，点击右上角「新增」开始创建</div>
+            <button class="btn btn-soft-blue" onclick="openForwardModal()">新增转发</button>
+          </div>
+        ` : state.forwardViewMode === 'card' ? `
+          <div class="cards-grid">
+            ${filtered.map(f => {
+              const ips = String(f.inIp || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+              const entryAddr = `${ips[0] || '0.0.0.0'}:${f.inPort}`;
+              const active = Number(f.status) === 1;
+              return `
+                <div class="item-card">
+                  <div class="item-card-head">
+                    <div>
+                      <div class="item-card-title">${escapeHtml(f.name)}</div>
+                      <div class="item-card-sub">${escapeHtml(f.tunnelName)}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <label class="switch">
+                        <input type="checkbox" ${active ? 'checked' : ''} onchange="toggleForwardStatus(${f.id}, this.checked)" />
+                        <span class="slider"></span>
+                      </label>
+                      <span class="badge ${active ? 'badge-green' : 'badge-pink'}">${active ? '正常' : '暂停'}</span>
+                    </div>
+                  </div>
+
+                  <div class="gray-info-bar" onclick="copyText('${escapeHtml(entryAddr)}', '入口地址')" title="点击复制入口地址">
+                    入口: ${escapeHtml(entryAddr)}${ips.length > 1 ? ` (+${ips.length - 1})` : ''}
+                  </div>
+                  <div class="gray-info-bar" onclick="copyText('${escapeHtml(f.remoteAddr)}', '目标地址')" title="点击复制目标地址">
+                    目标: ${escapeHtml(f.remoteAddr)}
+                  </div>
+
+                  <div class="pills-row-3">
+                    <span class="badge badge-blue">${stratMap[f.strategy] || '主备'}</span>
+                    <span class="badge badge-blue" onclick="handleResetSingleFlow(${f.id})" style="cursor:pointer" title="点击可清零该条流量">↑${formatBytes(f.outFlow)}</span>
+                    <span class="badge badge-green" onclick="handleResetSingleFlow(${f.id})" style="cursor:pointer" title="点击可清零该条流量">↓${formatBytes(f.inFlow)}</span>
+                  </div>
+
+                  <div class="card-btn-row-3">
+                    <button class="btn btn-soft-blue" onclick="openForwardModal(${f.id})">✎ 编辑</button>
+                    <button class="btn btn-soft-amber" onclick="handleDiagnoseForward(${f.id})">▲ 诊断</button>
+                    <button class="btn btn-soft-pink" onclick="handleDeleteForward(${f.id})">⊗ 删除</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : `
+          <div class="dash-section-card" style="padding:0;overflow:hidden">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>转发名称</th>
+                    <th>所属隧道</th>
+                    <th>入口地址</th>
+                    <th>目标地址</th>
+                    <th>策略</th>
+                    <th>上传 / 下载</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${filtered.map(f => {
+                    const firstIp = String(f.inIp || '').split(/[\n,]+/)[0] || '0.0.0.0';
+                    const entryAddr = `${firstIp}:${f.inPort}`;
+                    const active = Number(f.status) === 1;
+                    return `
+                      <tr>
+                        <td style="font-weight:700">${escapeHtml(f.name)}</td>
+                        <td>${escapeHtml(f.tunnelName)}</td>
+                        <td style="font-family:monospace;cursor:pointer" onclick="copyText('${escapeHtml(entryAddr)}')">${escapeHtml(entryAddr)}</td>
+                        <td style="font-family:monospace">${escapeHtml(f.remoteAddr)}</td>
+                        <td><span class="badge badge-blue">${stratMap[f.strategy] || '主备'}</span></td>
+                        <td>↑${formatBytes(f.outFlow)} / ↓${formatBytes(f.inFlow)}</td>
+                        <td>
+                          <label class="switch">
+                            <input type="checkbox" ${active ? 'checked' : ''} onchange="toggleForwardStatus(${f.id}, this.checked)" />
+                            <span class="slider"></span>
+                          </label>
+                        </td>
+                        <td>
+                          <div style="display:flex;gap:6px">
+                            <button class="btn btn-soft-blue" style="padding:4px 10px" onclick="openForwardModal(${f.id})">编辑</button>
+                            <button class="btn btn-soft-amber" style="padding:4px 10px" onclick="handleDiagnoseForward(${f.id})">诊断</button>
+                            <button class="btn btn-soft-pink" style="padding:4px 10px" onclick="handleDeleteForward(${f.id})">删除</button>
+                          </div>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `}
+      `;
+    }
+
+    // ======================= 3. 隧道管理 (1:1 还原截图卡片网格) =======================
+    function renderTunnelTab() {
+      return `
+        <div class="page-toolbar">
+          <div></div>
+          <div class="page-toolbar-right">
+            <button class="btn btn-soft-blue" onclick="openTunnelModal()">新增</button>
+          </div>
+        </div>
+
+        ${state.tunnels.length === 0 ? `
+          <div class="empty-state">
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">暂无隧道数据</div>
+            <div style="color:var(--text-muted);margin-bottom:16px">点击右上角「新增」创建端口转发或加密隧道转发</div>
+            <button class="btn btn-soft-blue" onclick="openTunnelModal()">新增</button>
+          </div>
+        ` : `
+          <div class="cards-grid">
+            ${state.tunnels.map(t => {
+              const inNode = state.nodes.find(n => Number(n.id) === Number(t.inNodeId));
+              const outNode = state.nodes.find(n => Number(n.id) === Number(t.outNodeId));
+              const isTunnelFwd = Number(t.type) === 2;
+              const inFirstIp = String((inNode && inNode.serverIp) || t.inIp || '').split(/[\n,]+/)[0] || '-';
+              const outFirstIp = String((outNode && outNode.serverIp) || t.outIp || '').split(/[\n,]+/)[0] || '-';
+              return `
+                <div class="item-card">
+                  <div>
+                    <div class="item-card-title">${escapeHtml(t.name)}</div>
+                    <div style="display:flex;gap:6px;margin-top:6px">
+                      <span class="badge ${isTunnelFwd ? 'badge-purple' : 'badge-blue'}">${isTunnelFwd ? '隧道转发' : '端口转发'}</span>
+                      <span class="badge badge-green">启用</span>
+                      ${isTunnelFwd && t.protocol ? `<span class="badge badge-blue">${escapeHtml(t.protocol.toUpperCase())}</span>` : ''}
+                    </div>
+                  </div>
+
+                  <div class="tunnel-node-box">
+                    <div class="tunnel-node-label">入口节点</div>
+                    <div class="tunnel-node-name">${escapeHtml(inNode ? inNode.name : ('节点#' + t.inNodeId))}</div>
+                    <div class="tunnel-node-ip">${escapeHtml(inFirstIp)}</div>
+                  </div>
+
+                  <div style="text-align:center;color:var(--text-muted);font-size:12px;margin:-4px 0">↓</div>
+
+                  <div class="tunnel-node-box">
+                    <div class="tunnel-node-label">出口节点</div>
+                    <div class="tunnel-node-name">${isTunnelFwd ? escapeHtml(outNode ? outNode.name : ('节点#' + t.outNodeId)) : escapeHtml(inNode ? inNode.name : '本机直出')}</div>
+                    <div class="tunnel-node-ip">${isTunnelFwd ? escapeHtml(outFirstIp) : escapeHtml(inFirstIp)}</div>
+                  </div>
+
+                  <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);padding:2px 2px">
+                    <span>${Number(t.flow) === 2 ? '双向计算' : '单向计算'}</span>
+                    <span>${t.trafficRatio || 1}x</span>
+                  </div>
+
+                  <div class="card-btn-row-3">
+                    <button class="btn btn-soft-blue" onclick="openTunnelModal(${t.id})">✎ 编辑</button>
+                    <button class="btn btn-soft-amber" onclick="handleDiagnoseTunnel(${t.id})">▲ 诊断</button>
+                    <button class="btn btn-soft-pink" onclick="handleDeleteTunnel(${t.id})">⊗ 删除</button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      `;
+    }
+
+    // ======================= 4. 节点监控 (1:1 还原截图 5 列全宽卡片) =======================
     function renderNodeTab() {
       return `
-        <div class="toolbar">
-          <div style="font-weight:700;font-size:16px">节点监控 (${state.nodes.length})</div>
-          <button class="btn btn-soft-primary" onclick="openNodeModal()">新增</button>
+        <div class="page-toolbar">
+          <div></div>
+          <div class="page-toolbar-right">
+            <button class="btn btn-soft-blue" onclick="openNodeModal()">新增</button>
+          </div>
         </div>
         ${state.nodes.length === 0 ? `
-          <div class="panel-card" style="text-align:center;padding:56px 20px">
-            <div style="font-size:15px;font-weight:600;margin-bottom:8px">暂无节点数据</div>
-            <div style="color:var(--text-muted);margin-bottom:18px">点击右上角「新增」添加您的第一台入口或出口转发服务器</div>
-            <button class="btn btn-primary" onclick="openNodeModal()">+ 新增节点</button>
+          <div class="empty-state">
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">暂无节点数据</div>
+            <div style="color:var(--text-muted);margin-bottom:16px">点击右上角「新增」添加入口或出口服务器节点</div>
+            <button class="btn btn-soft-blue" onclick="openNodeModal()">新增</button>
           </div>
         ` : `
           <div class="node-grid">
@@ -1142,12 +1689,12 @@
 
       return `
         <div class="node-card">
-          <div class="node-card-header">
+          <div class="item-card-head">
             <div>
-              <div class="node-title">${escapeHtml(node.name)}</div>
-              <div class="node-subip">${escapeHtml(node.serverIp)}</div>
+              <div class="item-card-title">${escapeHtml(node.name)}</div>
+              <div class="item-card-sub">${escapeHtml(node.serverIp)}</div>
             </div>
-            <span class="badge ${online ? 'badge-online' : 'badge-offline'}">${online ? '在线' : '离线'}</span>
+            <span class="badge ${online ? 'badge-green' : 'badge-pink'}">${online ? '在线' : '离线'}</span>
           </div>
 
           <div class="kv-row"><span>入口IP</span><span class="kv-val" title="${escapeHtml(node.ip)}">${escapeHtml(firstInIp)}</span></div>
@@ -1156,47 +1703,147 @@
           <div class="kv-row"><span>开机时间</span><span class="kv-val">${uptimeStr}</span></div>
 
           <div class="meter-grid">
-            <div class="meter-box">
+            <div>
               <div class="meter-head"><span>CPU</span><span>${cpu}</span></div>
               <div class="progress-track"><div class="progress-bar" style="width:${cpuPct}%"></div></div>
             </div>
-            <div class="meter-box">
+            <div>
               <div class="meter-head"><span>内存</span><span>${mem}</span></div>
               <div class="progress-track"><div class="progress-bar" style="width:${memPct}%"></div></div>
             </div>
           </div>
 
           <div class="speed-grid">
-            <div class="speed-cell">
-              <div class="speed-cell-label">上传</div>
-              <div class="speed-cell-val">${upSpeed}</div>
+            <div class="speed-box">
+              <div class="speed-box-label">上传</div>
+              <div class="speed-box-val">${upSpeed}</div>
             </div>
-            <div class="speed-cell">
-              <div class="speed-cell-label">下载</div>
-              <div class="speed-cell-val">${downSpeed}</div>
+            <div class="speed-box">
+              <div class="speed-box-label">下载</div>
+              <div class="speed-box-val">${downSpeed}</div>
             </div>
           </div>
 
           <div class="speed-grid">
-            <div class="flow-cell-up">
-              <div style="font-size:11px;opacity:.85">↑ 上行流量</div>
+            <div class="flow-box-up">
+              <div style="font-size:10.5px;opacity:.85">↑ 上行流量</div>
               <div style="margin-top:2px">${upTraffic}</div>
             </div>
-            <div class="flow-cell-down">
-              <div style="font-size:11px;opacity:.85">↓ 下行流量</div>
+            <div class="flow-box-down">
+              <div style="font-size:10.5px;opacity:.85">↓ 下行流量</div>
               <div style="margin-top:2px">${downTraffic}</div>
             </div>
           </div>
 
-          <div class="card-actions-3">
-            <button class="btn btn-soft-success btn-sm" onclick="openInstallCommandModal(${node.id})">安装</button>
-            <button class="btn btn-soft-primary btn-sm" onclick="openNodeModal(${node.id})">编辑</button>
-            <button class="btn btn-soft-danger btn-sm" onclick="handleDeleteNode(${node.id})">删除</button>
+          <div class="card-btn-row-3">
+            <button class="btn btn-soft-green" onclick="openInstallCommandModal(${node.id})">安装</button>
+            <button class="btn btn-soft-blue" onclick="openNodeModal(${node.id})">编辑</button>
+            <button class="btn btn-soft-pink" onclick="handleDeleteNode(${node.id})">删除</button>
           </div>
         </div>
       `;
     }
 
+    // ======================= 5. 限速管理 (统一卡片风格) =======================
+    function renderLimitTab() {
+      return `
+        <div class="page-toolbar">
+          <div></div>
+          <div class="page-toolbar-right">
+            <button class="btn btn-soft-blue" onclick="openLimitModal()">新增</button>
+          </div>
+        </div>
+        ${state.speedLimits.length === 0 ? `
+          <div class="empty-state">
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px">暂无限速规则</div>
+            <div style="color:var(--text-muted);margin-bottom:16px">点击右上角「新增」创建隧道限速规则</div>
+            <button class="btn btn-soft-blue" onclick="openLimitModal()">新增</button>
+          </div>
+        ` : `
+          <div class="cards-grid">
+            ${state.speedLimits.map(s => `
+              <div class="item-card">
+                <div class="item-card-head">
+                  <div>
+                    <div class="item-card-title">${escapeHtml(s.name)}</div>
+                    <div class="item-card-sub">绑定隧道: ${escapeHtml(s.tunnelName || ('#' + s.tunnelId))}</div>
+                  </div>
+                  <span class="badge badge-green">启用</span>
+                </div>
+                <div class="gray-info-bar" style="cursor:default">
+                  限速阈值: <b>${s.speed} Mbps</b> (约 ${(Number(s.speed) / 8).toFixed(1)} MB/s)
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+                  <button class="btn btn-soft-blue" onclick="openLimitModal(${s.id})">✎ 编辑</button>
+                  <button class="btn btn-soft-pink" onclick="handleDeleteLimit(${s.id})">⊗ 删除</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      `;
+    }
+
+    // ======================= 6. 网站配置 (干净极简，无多余说明文字) =======================
+    function renderConfigTab() {
+      const c = state.configs;
+      return `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:18px;width:100%">
+          <div class="dash-section-card" style="margin-bottom:0">
+            <div class="dash-section-title">网站配置</div>
+            <form onsubmit="submitSiteConfig(event)">
+              <div class="form-group">
+                <label class="form-label">面板后端地址</label>
+                <input id="cfgIp" class="input" placeholder="格式 ip:port 或 域名:port" value="${escapeHtml(c.ip || location.host)}" required />
+                <div class="form-hint">用于对接节点时使用，格式“ip:port”或“域名:port”</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">应用名称</label>
+                <input id="cfgAppName" class="input" placeholder="请输入应用名称" value="${escapeHtml(c.app_name || 'flux')}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">面板绑定域名</label>
+                <input id="cfgDomain" class="input" placeholder="如: zf.vponlive.com" value="${escapeHtml(c.panel_domain || '')}" />
+              </div>
+              <div class="form-group">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-box);border-radius:10px;border:1px solid var(--border-subtle)">
+                  <div>
+                    <div style="font-weight:700;font-size:13px">阻止 IP+端口 直接访问面板</div>
+                    <div style="font-size:11.5px;color:var(--text-muted)">开启后仅允许通过已绑定的域名访问面板</div>
+                  </div>
+                  <label class="switch">
+                    <input id="cfgBlockIp" type="checkbox" ${c.block_ip_access === 'true' ? 'checked' : ''} />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">保存配置</button>
+            </form>
+          </div>
+
+          <div class="dash-section-card" style="margin-bottom:0">
+            <div class="dash-section-title">数据备份与恢复</div>
+            <div class="form-group">
+              <label class="form-label">导出面板全量配置与节点数据</label>
+              <div style="margin-top:8px">
+                <button type="button" class="btn btn-soft-blue" onclick="handleExportBackup()">导出备份 (.json)</button>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:20px">
+              <label class="form-label">从备份文件恢复 (支持 .json 或 .sql)</label>
+              <div style="margin-top:8px">
+                <label class="btn btn-soft-green" style="cursor:pointer">
+                  选择备份文件恢复
+                  <input type="file" accept=".json,.sql" style="display:none" onchange="handleImportBackupFile(event)" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ======================= 各模块弹窗逻辑 =======================
     function openNodeModal(editId = null) {
       const node = editId ? state.nodes.find(n => Number(n.id) === Number(editId)) : null;
       const mount = document.getElementById('modalMount');
@@ -1210,7 +1857,7 @@
             <form onsubmit="submitNodeForm(event, ${node ? node.id : 'null'})">
               <div class="form-group">
                 <label class="form-label">节点名称</label>
-                <input id="nodeName" class="input" placeholder="请输入节点名称，如：阿里云GZ / SG" value="${escapeHtml(node ? node.name : '')}" required />
+                <input id="nodeName" class="input" placeholder="请输入节点名称" value="${escapeHtml(node ? node.name : '')}" required />
               </div>
               <div class="form-group">
                 <label class="form-label">服务器IP</label>
@@ -1219,7 +1866,7 @@
               <div class="form-group">
                 <label class="form-label">入口IP</label>
                 <textarea id="nodeInIp" class="textarea" rows="3" placeholder="一行一个IP地址或域名，例如:\n192.168.1.100\nexample.com">${escapeHtml(node ? node.ip : '')}</textarea>
-                <div class="form-hint">支持多个IP，每行一个地址（留空则默认使用服务器IP）</div>
+                <div class="form-hint">支持多个IP，每行一个地址</div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div class="form-group">
@@ -1233,28 +1880,29 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">屏蔽协议 (开启开关以屏蔽对应协议)</label>
+                <label class="form-label">屏蔽协议</label>
+                <div class="form-hint" style="margin-top:-2px;margin-bottom:8px">开启开关以屏蔽对应协议</div>
                 <div class="proto-grid">
                   <div class="proto-card">
-                    <div class="proto-card-top">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-weight:700">
                       <span>HTTP</span>
                       <label class="switch"><input id="nodeHttp" type="checkbox" ${node && Number(node.http) === 1 ? 'checked' : ''} /><span class="slider"></span></label>
                     </div>
-                    <span style="font-size:11px;color:var(--text-muted)">屏蔽明文HTTP</span>
+                    <span style="font-size:11px;color:var(--text-muted)">禁用/启用</span>
                   </div>
                   <div class="proto-card">
-                    <div class="proto-card-top">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-weight:700">
                       <span>TLS</span>
                       <label class="switch"><input id="nodeTls" type="checkbox" ${node && Number(node.tls) === 1 ? 'checked' : ''} /><span class="slider"></span></label>
                     </div>
-                    <span style="font-size:11px;color:var(--text-muted)">屏蔽TLS握手中转</span>
+                    <span style="font-size:11px;color:var(--text-muted)">禁用/启用</span>
                   </div>
                   <div class="proto-card">
-                    <div class="proto-card-top">
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-weight:700">
                       <span>SOCKS</span>
                       <label class="switch"><input id="nodeSocks" type="checkbox" ${node && Number(node.socks) === 1 ? 'checked' : ''} /><span class="slider"></span></label>
                     </div>
-                    <span style="font-size:11px;color:var(--text-muted)">屏蔽SOCKS代理</span>
+                    <span style="font-size:11px;color:var(--text-muted)">禁用/启用</span>
                   </div>
                 </div>
                 <div class="alert-box alert-danger">
@@ -1288,8 +1936,9 @@
       const tls = document.getElementById('nodeTls').checked ? 1 : 0;
       const socks = document.getElementById('nodeSocks').checked ? 1 : 0;
 
-      const payload = { id: editId, name, serverIp, ip, portSta, portEnd, http, tls, socks };
-      const res = await apiPost(editId ? '/node/update' : '/node/create', payload);
+      const res = await apiPost(editId ? '/node/update' : '/node/create', {
+        id: editId, name, serverIp, ip, portSta, portEnd, http, tls, socks
+      });
       if (res.code === 0) {
         showToast(res.msg || '保存成功', 'success');
         closeModal();
@@ -1328,86 +1977,23 @@
               <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="form-group">
-              <label class="form-label">方式一：极简轻量原生转发被控 (推荐 · 内存占用仅 ~12MB)</label>
-              <div class="code-box">${escapeHtml(lightCommand)}</div>
-              <div style="margin-top:8px;text-align:right">
-                <button class="btn btn-soft-primary btn-sm" onclick="copyText('${escapeHtml(lightCommand)}', '轻量被控安装命令')">复制轻量版命令</button>
+              <label class="form-label">请复制以下安装命令到服务器上执行 (轻量原生转发内核 · 防国内云扫描):</label>
+              <div class="code-box" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                <span>${escapeHtml(lightCommand)}</span>
+                <button class="btn btn-soft-blue" style="flex-shrink:0" onclick="copyText('${escapeHtml(lightCommand)}', '安装命令')">复制</button>
               </div>
             </div>
-            <div class="form-group" style="margin-top:18px">
-              <label class="form-label">方式二：原版 Flux GOST 被控二进制 (100% 协议兼容)</label>
-              <div class="code-box">${escapeHtml(gostCommand)}</div>
-              <div style="margin-top:8px;text-align:right">
-                <button class="btn btn-ghost btn-sm" onclick="copyText('${escapeHtml(gostCommand)}', '原版GOST安装命令')">复制原版GOST命令</button>
+            <div class="form-group" style="margin-top:14px">
+              <label class="form-label" style="color:var(--text-muted)">兼容模式 (原版 GOST 二进制被控):</label>
+              <div class="code-box" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                <span>${escapeHtml(gostCommand)}</span>
+                <button class="btn btn-ghost" style="flex-shrink:0" onclick="copyText('${escapeHtml(gostCommand)}', 'GOST安装命令')">复制</button>
               </div>
             </div>
-            <div class="form-hint">💡 提示：请在对应节点服务器上以 root 权限执行上述任一命令，安装后节点将自动上线。</div>
+            <div class="form-hint">💡 提示：如果复制按钮失效，请手动选择上方文本进行复制</div>
             <div class="modal-footer">
               <button class="btn btn-ghost" onclick="closeModal()">关闭</button>
             </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // ======================= 3. 隧道管理视图 (1:1 还原截图配置项) =======================
-    function renderTunnelTab() {
-      return `
-        <div class="toolbar">
-          <div style="font-weight:700;font-size:16px">隧道管理 (${state.tunnels.length})</div>
-          <button class="btn btn-soft-primary" onclick="openTunnelModal()">新增隧道</button>
-        </div>
-        <div class="panel-card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>隧道名称</th>
-                  <th>隧道类型</th>
-                  <th>入口节点 (监听地址)</th>
-                  <th>出口节点 / 协议</th>
-                  <th>流量计算 / 倍率</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${state.tunnels.length === 0 ? `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:36px">暂无隧道配置，请点击右上角「新增隧道」</td></tr>` : state.tunnels.map(t => {
-                  const inNode = state.nodes.find(n => Number(n.id) === Number(t.inNodeId));
-                  const outNode = state.nodes.find(n => Number(n.id) === Number(t.outNodeId));
-                  const isTunnelFwd = Number(t.type) === 2;
-                  return `
-                    <tr>
-                      <td>#${t.id}</td>
-                      <td style="font-weight:700">${escapeHtml(t.name)}</td>
-                      <td>
-                        <span class="badge ${isTunnelFwd ? 'badge-primary' : 'badge-online'}">${isTunnelFwd ? '隧道转发' : '端口转发'}</span>
-                      </td>
-                      <td>
-                        <div style="font-weight:600">${escapeHtml(inNode ? inNode.name : ('节点#' + t.inNodeId))}</div>
-                        <div style="font-size:12px;color:var(--text-muted)">TCP: ${escapeHtml(t.tcpListenAddr)} | UDP: ${escapeHtml(t.udpListenAddr)}</div>
-                      </td>
-                      <td>
-                        ${isTunnelFwd
-                          ? `<div style="font-weight:600">${escapeHtml(outNode ? outNode.name : ('节点#' + t.outNodeId))}</div><div style="font-size:12px;color:var(--primary-text)">协议: ${escapeHtml((t.protocol || 'tls').toUpperCase())}</div>`
-                          : '<span style="color:var(--text-muted)">本机直出</span>'}
-                      </td>
-                      <td>
-                        <div>${Number(t.flow) === 2 ? '双向计算' : '单向计算 (仅上传)'}</div>
-                        <div style="font-size:12px;color:var(--text-muted)">倍率: ${t.trafficRatio || 1}x</div>
-                      </td>
-                      <td>
-                        <div style="display:flex;gap:6px">
-                          <button class="btn btn-soft-success btn-sm" onclick="handleDiagnoseTunnel(${t.id})">诊断</button>
-                          <button class="btn btn-soft-primary btn-sm" onclick="openTunnelModal(${t.id})">编辑</button>
-                          <button class="btn btn-soft-danger btn-sm" onclick="handleDeleteTunnel(${t.id})">删除</button>
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
           </div>
         </div>
       `;
@@ -1432,8 +2018,8 @@
               <div class="form-group">
                 <label class="form-label">隧道类型</label>
                 <select id="tunType" class="select" onchange="toggleTunnelOutSection()" ${t ? 'disabled' : ''}>
-                  <option value="1" ${curType === 1 ? 'selected' : ''}>端口转发 (单机入口直出)</option>
-                  <option value="2" ${curType === 2 ? 'selected' : ''}>隧道转发 (入口节点 -> 协议隧道 -> 出口节点)</option>
+                  <option value="1" ${curType === 1 ? 'selected' : ''}>端口转发</option>
+                  <option value="2" ${curType === 2 ? 'selected' : ''}>隧道转发</option>
                 </select>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -1450,12 +2036,12 @@
                 </div>
               </div>
 
-              <div style="font-weight:700;margin:14px 0 10px;padding-top:10px;border-top:1px solid var(--border-color)">入口配置</div>
+              <div style="font-weight:700;margin:12px 0 8px;padding-top:10px;border-top:1px solid var(--border-color)">入口配置</div>
               <div class="form-group">
                 <label class="form-label">入口节点</label>
                 <select id="tunInNode" class="select" ${t ? 'disabled' : ''} required>
                   <option value="">请选择入口节点</option>
-                  ${state.nodes.map(n => `<option value="${n.id}" ${t && Number(t.inNodeId) === Number(n.id) ? 'selected' : ''}>${escapeHtml(n.name)} (${escapeHtml(n.serverIp)})</option>`).join('')}
+                  ${state.nodes.map(n => `<option value="${n.id}" ${t && Number(t.inNodeId) === Number(n.id) ? 'selected' : ''}>${escapeHtml(n.name)}</option>`).join('')}
                 </select>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -1470,11 +2056,11 @@
               </div>
               <div class="form-group">
                 <label class="form-label">出口网卡名或IP</label>
-                <input id="tunInterface" class="input" placeholder="请输入出口网卡名或IP (可选)" value="${escapeHtml(t && t.interfaceName ? t.interfaceName : '')}" />
+                <input id="tunInterface" class="input" placeholder="请输入出口网卡名或IP" value="${escapeHtml(t && t.interfaceName ? t.interfaceName : '')}" />
               </div>
 
               <div id="tunOutSection" style="display:${curType === 2 ? 'block' : 'none'}">
-                <div style="font-weight:700;margin:14px 0 10px;padding-top:10px;border-top:1px solid var(--border-color)">出口配置</div>
+                <div style="font-weight:700;margin:12px 0 8px;padding-top:10px;border-top:1px solid var(--border-color)">出口配置</div>
                 <div class="form-group">
                   <label class="form-label">协议类型</label>
                   <select id="tunProtocol" class="select">
@@ -1485,19 +2071,23 @@
                   <label class="form-label">出口节点</label>
                   <select id="tunOutNode" class="select" ${t ? 'disabled' : ''}>
                     <option value="">请选择出口节点</option>
-                    ${state.nodes.map(n => `<option value="${n.id}" ${t && Number(t.outNodeId) === Number(n.id) ? 'selected' : ''}>${escapeHtml(n.name)} (${escapeHtml(n.serverIp)})</option>`).join('')}
+                    ${state.nodes.map(n => `<option value="${n.id}" ${t && Number(t.outNodeId) === Number(n.id) ? 'selected' : ''}>${escapeHtml(n.name)}</option>`).join('')}
                   </select>
                 </div>
               </div>
 
               <div class="alert-box alert-info">
                 <span>ℹ️</span>
-                <span><b>TCP,UDP监听地址：</b>V6或者双栈填写 <code>[::]</code>，V4填写 <code>0.0.0.0</code>。<br/><b>出口网卡名或IP：</b>用于多IP服务器指定使用那个IP和出口服务器通讯，不懂的默认为空就行。</span>
+                <span><b>TCP,UDP监听地址：</b>V6或者双栈填写[::]，V4填写0.0.0.0。不懂的就去看文档网站内的说明</span>
+              </div>
+              <div class="alert-box alert-info">
+                <span>ℹ️</span>
+                <span><b>出口网卡名或IP：</b>用于多IP服务器指定使用那个IP和出口服务器通讯，不懂的默认为空就行</span>
               </div>
 
               <div class="modal-footer">
                 <button type="button" class="btn btn-ghost" onclick="closeModal()">取消</button>
-                <button type="submit" class="btn btn-primary">${t ? '保存修改' : '创建'}</button>
+                <button type="submit" class="btn btn-primary">${t ? '确定' : '创建'}</button>
               </div>
             </form>
           </div>
@@ -1532,7 +2122,7 @@
         closeModal();
         refreshActiveTabData();
       } else {
-        showToast(res.msg || '保存隧道失败', 'error');
+        showToast(res.msg || '保存失败', 'error');
       }
     }
 
@@ -1548,123 +2138,13 @@
     }
 
     async function handleDiagnoseTunnel(tunnelId) {
-      showToast('正在执行节点 TCP Ping 链路诊断...', 'info');
+      showToast('正在执行隧道连通性诊断...', 'info');
       const res = await apiPost('/tunnel/diagnose', { tunnelId });
       if (res.code === 0 && res.data) {
         openDiagnosisResultModal(res.data.tunnelName, res.data.results || []);
       } else {
         showToast(res.msg || '诊断失败', 'error');
       }
-    }
-
-    // ======================= 4. 转发管理视图 =======================
-    function renderForwardTab() {
-      const q = (state.searchQuery || '').toLowerCase();
-      const filtered = state.forwards.filter(f => {
-        if (!q) return true;
-        return String(f.name || '').toLowerCase().includes(q) ||
-               String(f.remoteAddr || '').toLowerCase().includes(q) ||
-               String(f.inPort || '').includes(q) ||
-               String(f.tunnelName || '').toLowerCase().includes(q);
-      });
-
-      return `
-        <div class="toolbar">
-          <div style="display:flex;align-items:center;gap:12px">
-            <div style="font-weight:700;font-size:16px">转发管理 (${filtered.length})</div>
-            <input class="input" style="width:240px;padding:7px 12px" placeholder="🔍 搜索转发名称 / 端口 / 目标IP..." value="${escapeHtml(state.searchQuery)}" oninput="state.searchQuery=this.value;renderApp()" />
-          </div>
-          <button class="btn btn-soft-primary" onclick="openForwardModal()">新增转发</button>
-        </div>
-
-        <div class="panel-card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>转发名称</th>
-                  <th>所属隧道</th>
-                  <th>入口访问地址 (点击复制)</th>
-                  <th>目标地址 (支持多地址负载)</th>
-                  <th>策略 / 限速</th>
-                  <th>流量 (↑上传 / ↓下载)</th>
-                  <th>状态开关</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${filtered.length === 0 ? `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:36px">暂无转发规则，点击右上角「新增转发」开始创建</td></tr>` : filtered.map(f => {
-                  const ips = String(f.inIp || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-                  const primaryAddr = `${ips[0] || '0.0.0.0'}:${f.inPort}`;
-                  const active = Number(f.status) === 1;
-                  const stratMap = { fifo: '主备容灾', round: '轮询负载', rand: '随机负载', hash: 'IP哈希' };
-                  return `
-                    <tr>
-                      <td>
-                        <div style="font-weight:700">${escapeHtml(f.name)}</div>
-                        ${f.outPort ? `<div style="font-size:11px;color:var(--text-muted)">隧道内部端口: ${f.outPort}</div>` : ''}
-                      </td>
-                      <td>
-                        <span class="badge ${Number(f.type) === 2 ? 'badge-primary' : 'badge-online'}">${escapeHtml(f.tunnelName)}</span>
-                      </td>
-                      <td>
-                        <span class="addr-chip" onclick="copyText('${escapeHtml(primaryAddr)}', '入口地址')">📋 ${escapeHtml(primaryAddr)}</span>
-                        ${ips.length > 1 ? `<button class="btn btn-ghost btn-sm" style="margin-left:4px;padding:2px 6px" onclick="openMultiAddrModal('${escapeHtml(f.name)}', '${escapeHtml(ips.join(','))}', ${f.inPort})">+${ips.length - 1}</button>` : ''}
-                      </td>
-                      <td style="font-family:monospace;font-size:12.5px">${escapeHtml(f.remoteAddr)}</td>
-                      <td>
-                        <span class="badge badge-warning">${stratMap[f.strategy] || '主备容灾'}</span>
-                        ${f.speedName ? `<div style="font-size:11px;color:var(--primary-text);margin-top:3px">⚡ ${escapeHtml(f.speedName)}</div>` : ''}
-                      </td>
-                      <td>
-                        <div style="font-size:12px">↑ ${formatBytes(f.outFlow)} / ↓ ${formatBytes(f.inFlow)}</div>
-                      </td>
-                      <td>
-                        <label class="switch">
-                          <input type="checkbox" ${active ? 'checked' : ''} onchange="toggleForwardStatus(${f.id}, this.checked)" />
-                          <span class="slider"></span>
-                        </label>
-                      </td>
-                      <td>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap">
-                          <button class="btn btn-soft-success btn-sm" onclick="handleDiagnoseForward(${f.id})">诊断</button>
-                          <button class="btn btn-soft-primary btn-sm" onclick="openForwardModal(${f.id})">编辑</button>
-                          <button class="btn btn-ghost btn-sm" onclick="handleResetSingleFlow(${f.id})">清零</button>
-                          <button class="btn btn-soft-danger btn-sm" onclick="handleDeleteForward(${f.id})">删除</button>
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    function openMultiAddrModal(name, ipsCsv, port) {
-      const ips = ipsCsv.split(',').filter(Boolean);
-      const mount = document.getElementById('modalMount');
-      mount.innerHTML = `
-        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-panel" style="max-width:420px">
-            <div class="modal-header">
-              <h3 class="modal-title">多入口连接地址 - ${escapeHtml(name)}</h3>
-              <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              ${ips.map(ip => {
-                const full = `${ip}:${port}`;
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-subtle);border-radius:8px"><code style="font-size:13px">${escapeHtml(full)}</code><button class="btn btn-soft-primary btn-sm" onclick="copyText('${escapeHtml(full)}', '地址')">复制</button></div>`;
-              }).join('')}
-            </div>
-            <div class="modal-footer">
-              <button class="btn btn-ghost" onclick="closeModal()">关闭</button>
-            </div>
-          </div>
-        </div>
-      `;
     }
 
     function openForwardModal(editId = null) {
@@ -1674,60 +2154,60 @@
         <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
           <div class="modal-panel">
             <div class="modal-header">
-              <h3 class="modal-title">${f ? '编辑转发规则' : '新增转发规则'}</h3>
+              <h3 class="modal-title">${f ? '编辑转发' : '新增转发'}</h3>
               <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <form onsubmit="submitForwardForm(event, ${f ? f.id : 'null'})">
               <div class="form-group">
                 <label class="form-label">转发名称</label>
-                <input id="fwdName" class="input" placeholder="如：SG落地-HY2 / 日本专线转发" value="${escapeHtml(f ? f.name : '')}" required />
+                <input id="fwdName" class="input" placeholder="请输入转发名称" value="${escapeHtml(f ? f.name : '')}" required />
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div class="form-group">
                   <label class="form-label">选择隧道</label>
                   <select id="fwdTunnelId" class="select" required>
                     <option value="">请选择隧道</option>
-                    ${state.tunnels.map(t => `<option value="${t.id}" ${f && Number(f.tunnelId) === Number(t.id) ? 'selected' : ''}>${escapeHtml(t.name)} (${Number(t.type) === 2 ? '隧道转发' : '端口转发'})</option>`).join('')}
+                    ${state.tunnels.map(t => `<option value="${t.id}" ${f && Number(f.tunnelId) === Number(t.id) ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">入口监听端口 (留空自动分配)</label>
-                  <input id="fwdInPort" class="input" type="number" min="1" max="65535" placeholder="留空则从节点端口池自动分配" value="${f && f.inPort ? f.inPort : ''}" />
+                  <label class="form-label">入口端口 (留空自动分配)</label>
+                  <input id="fwdInPort" class="input" type="number" min="1" max="65535" placeholder="留空自动分配" value="${f && f.inPort ? f.inPort : ''}" />
                 </div>
               </div>
 
               <div class="form-group">
-                <label class="form-label">目标地址 (落地 IP:端口，多个地址请换行或用英文逗号分隔)</label>
-                <textarea id="fwdRemoteAddr" class="textarea" rows="3" placeholder="例如：\n1.2.3.4:443\n[2400:3200::1]:8443" required>${escapeHtml(f ? String(f.remoteAddr).replace(/,/g, '\n') : '')}</textarea>
+                <label class="form-label">目标地址</label>
+                <textarea id="fwdRemoteAddr" class="textarea" rows="3" placeholder="一行一个目标地址 ip:port，例如:\n218.208.109.187:37846" required>${escapeHtml(f ? String(f.remoteAddr).replace(/,/g, '\n') : '')}</textarea>
               </div>
 
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                 <div class="form-group">
-                  <label class="form-label">多目标负载均衡策略</label>
+                  <label class="form-label">负载均衡策略</label>
                   <select id="fwdStrategy" class="select">
-                    <option value="fifo" ${!f || f.strategy === 'fifo' ? 'selected' : ''}>主备故障转移 (fifo - 默认)</option>
-                    <option value="round" ${f && f.strategy === 'round' ? 'selected' : ''}>轮询负载均衡 (round)</option>
-                    <option value="rand" ${f && f.strategy === 'rand' ? 'selected' : ''}>随机负载均衡 (rand)</option>
-                    <option value="hash" ${f && f.strategy === 'hash' ? 'selected' : ''}>客户端 IP 哈希 (hash)</option>
+                    <option value="fifo" ${!f || f.strategy === 'fifo' ? 'selected' : ''}>主备 (fifo)</option>
+                    <option value="round" ${f && f.strategy === 'round' ? 'selected' : ''}>轮询 (round)</option>
+                    <option value="rand" ${f && f.strategy === 'rand' ? 'selected' : ''}>随机 (rand)</option>
+                    <option value="hash" ${f && f.strategy === 'hash' ? 'selected' : ''}>哈希 (hash)</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">绑定限速规则 (可选)</label>
+                  <label class="form-label">限速规则 (可选)</label>
                   <select id="fwdSpeedId" class="select">
-                    <option value="">不限速 (全速转发)</option>
+                    <option value="">不限速</option>
                     ${state.speedLimits.map(s => `<option value="${s.id}" ${f && Number(f.speedId) === Number(s.id) ? 'selected' : ''}>${escapeHtml(s.name)} (${s.speed} Mbps)</option>`).join('')}
                   </select>
                 </div>
               </div>
 
               <div class="form-group">
-                <label class="form-label">指定出口网卡名或源IP (可选)</label>
-                <input id="fwdInterface" class="input" placeholder="多IP服务器可指定出口网卡或源IP，默认留空" value="${escapeHtml(f && f.interfaceName ? f.interfaceName : '')}" />
+                <label class="form-label">出口网卡名或IP (可选)</label>
+                <input id="fwdInterface" class="input" placeholder="默认为空即可" value="${escapeHtml(f && f.interfaceName ? f.interfaceName : '')}" />
               </div>
 
               <div class="modal-footer">
                 <button type="button" class="btn btn-ghost" onclick="closeModal()">取消</button>
-                <button type="submit" class="btn btn-primary">${f ? '保存更新' : '立即创建'}</button>
+                <button type="submit" class="btn btn-primary">确定</button>
               </div>
             </form>
           </div>
@@ -1751,7 +2231,7 @@
       };
       const res = await apiPost(editId ? '/forward/update' : '/forward/create', payload);
       if (res.code === 0) {
-        showToast(res.msg || '转发保存成功', 'success');
+        showToast(res.msg || '保存成功', 'success');
         closeModal();
         refreshActiveTabData();
       } else {
@@ -1762,15 +2242,16 @@
     async function toggleForwardStatus(id, enabled) {
       const res = await apiPost(enabled ? '/forward/resume' : '/forward/pause', { id });
       if (res.code === 0) {
-        showToast(enabled ? '转发服务已恢复' : '转发服务已暂停', 'success');
+        showToast(enabled ? '转发已开启' : '转发已暂停', 'success');
         refreshActiveTabData();
       } else {
-        showToast(res.msg || '状态切换失败', 'error');
+        showToast(res.msg || '状态更新失败', 'error');
         refreshActiveTabData();
       }
     }
 
     async function handleResetSingleFlow(id) {
+      if (!confirm('确认清零该条转发的流量统计吗？')) return;
       const res = await apiPost('/forward/reset-flow', { id });
       if (res.code === 0) {
         showToast('流量已清零', 'success');
@@ -1779,13 +2260,13 @@
     }
 
     async function handleDeleteForward(id) {
-      if (!confirm('确认删除该条端口转发规则吗？')) return;
+      if (!confirm('确认删除该转发规则吗？')) return;
       const res = await apiPost('/forward/delete', { id });
       if (res.code === 0) {
-        showToast('端口转发已删除', 'success');
+        showToast('转发已删除', 'success');
         refreshActiveTabData();
       } else {
-        if (confirm(`常规删除返回: ${res.msg}\n是否执行强制删除？`)) {
+        if (confirm(`常规删除提示: ${res.msg}\n是否强制删除？`)) {
           const fRes = await apiPost('/forward/force-delete', { id });
           if (fRes.code === 0) {
             showToast('已强制删除', 'success');
@@ -1796,7 +2277,7 @@
     }
 
     async function handleDiagnoseForward(forwardId) {
-      showToast('正在诊断转发链路 TCP 延迟...', 'info');
+      showToast('正在执行转发链路诊断...', 'info');
       const res = await apiPost('/forward/diagnose', { forwardId });
       if (res.code === 0 && res.data) {
         openDiagnosisResultModal(res.data.forwardName, res.data.results || []);
@@ -1811,73 +2292,28 @@
         <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
           <div class="modal-panel">
             <div class="modal-header">
-              <h3 class="modal-title">🩺 链路 TCP Ping 诊断报告 - ${escapeHtml(title)}</h3>
+              <h3 class="modal-title">诊断结果 - ${escapeHtml(title)}</h3>
               <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div style="display:flex;flex-direction:column;gap:10px">
               ${results.map(r => `
-                <div style="padding:14px;border-radius:12px;border:1px solid var(--border-color);background:var(--bg-subtle)">
+                <div style="padding:12px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-box)">
                   <div style="display:flex;justify-content:space-between;align-items:center">
                     <span style="font-weight:700">${escapeHtml(r.description)}</span>
-                    <span class="badge ${r.success ? 'badge-online' : 'badge-offline'}">${r.success ? '连通正常' : '连接失败'}</span>
+                    <span class="badge ${r.success ? 'badge-green' : 'badge-pink'}">${r.success ? '连通正常' : '连接失败'}</span>
                   </div>
-                  <div style="margin-top:8px;font-size:12.5px;color:var(--text-secondary)">
-                    执行节点: <b>${escapeHtml(r.nodeName)}</b> → 目标: <code>${escapeHtml(r.targetIp)}:${r.targetPort}</code>
+                  <div style="margin-top:6px;font-size:12px;color:var(--text-secondary)">
+                    节点: <b>${escapeHtml(r.nodeName)}</b> → 目标: <code>${escapeHtml(r.targetIp)}:${r.targetPort}</code>
                   </div>
-                  <div style="margin-top:4px;font-size:12.5px">
-                    平均延迟: <b>${r.averageTime >= 0 ? r.averageTime + ' ms' : '-'}</b> | 丢包率: <b>${r.packetLoss}%</b> | 状态: ${escapeHtml(r.message)}
+                  <div style="margin-top:4px;font-size:12px">
+                    延迟: <b>${r.averageTime >= 0 ? r.averageTime + ' ms' : '-'}</b> | 丢包率: <b>${r.packetLoss}%</b> | 说明: ${escapeHtml(r.message)}
                   </div>
                 </div>
               `).join('')}
             </div>
             <div class="modal-footer">
-              <button class="btn btn-primary" onclick="closeModal()">完成</button>
+              <button class="btn btn-primary" onclick="closeModal()">关闭</button>
             </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // ======================= 5. 限速管理视图 =======================
-    function renderLimitTab() {
-      return `
-        <div class="toolbar">
-          <div style="font-weight:700;font-size:16px">限速管理 (${state.speedLimits.length})</div>
-          <button class="btn btn-soft-primary" onclick="openLimitModal()">新增限速规则</button>
-        </div>
-        <div class="panel-card">
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>规则名称</th>
-                  <th>限速阈值 (Mbps)</th>
-                  <th>折合速率 (MB/s)</th>
-                  <th>绑定隧道</th>
-                  <th>状态</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${state.speedLimits.length === 0 ? `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:36px">暂无限速规则，默认所有转发全速运行</td></tr>` : state.speedLimits.map(s => `
-                  <tr>
-                    <td>#${s.id}</td>
-                    <td style="font-weight:700">${escapeHtml(s.name)}</td>
-                    <td><span class="badge badge-primary">${s.speed} Mbps</span></td>
-                    <td>${(Number(s.speed) / 8).toFixed(1)} MB/s</td>
-                    <td>${escapeHtml(s.tunnelName || ('隧道#' + s.tunnelId))}</td>
-                    <td><span class="badge badge-online">已生效</span></td>
-                    <td>
-                      <div style="display:flex;gap:6px">
-                        <button class="btn btn-soft-primary btn-sm" onclick="openLimitModal(${s.id})">编辑</button>
-                        <button class="btn btn-soft-danger btn-sm" onclick="handleDeleteLimit(${s.id})">删除</button>
-                      </div>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
           </div>
         </div>
       `;
@@ -1888,25 +2324,24 @@
       const mount = document.getElementById('modalMount');
       mount.innerHTML = `
         <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-panel" style="max-width:460px">
+          <div class="modal-panel" style="max-width:440px">
             <div class="modal-header">
-              <h3 class="modal-title">${rule ? '编辑限速规则' : '新增限速规则'}</h3>
+              <h3 class="modal-title">${rule ? '编辑限速' : '新增限速'}</h3>
               <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <form onsubmit="submitLimitForm(event, ${rule ? rule.id : 'null'})">
               <div class="form-group">
                 <label class="form-label">规则名称</label>
-                <input id="limName" class="input" placeholder="如：100M标准限速 / 500M家宽限速" value="${escapeHtml(rule ? rule.name : '')}" required />
+                <input id="limName" class="input" placeholder="请输入规则名称" value="${escapeHtml(rule ? rule.name : '')}" required />
               </div>
               <div class="form-group">
-                <label class="form-label">限速阈值 (单位: Mbps)</label>
+                <label class="form-label">速度限制 (Mbps)</label>
                 <input id="limSpeed" class="input" type="number" min="1" max="100000" value="${rule ? rule.speed : 100}" required />
-                <div class="form-hint">100 Mbps ≈ 12.5 MB/s，500 Mbps ≈ 62.5 MB/s</div>
               </div>
               <div class="form-group">
                 <label class="form-label">绑定隧道</label>
                 <select id="limTunnelId" class="select" required>
-                  <option value="">请选择要绑定的隧道</option>
+                  <option value="">请选择隧道</option>
                   ${state.tunnels.map(t => `<option value="${t.id}" ${rule && Number(rule.tunnelId) === Number(t.id) ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}
                 </select>
               </div>
@@ -1924,14 +2359,13 @@
       e.preventDefault();
       const tunnelId = Number(document.getElementById('limTunnelId').value);
       const tun = state.tunnels.find(t => Number(t.id) === tunnelId);
-      const payload = {
+      const res = await apiPost(editId ? '/speed-limit/update' : '/speed-limit/create', {
         id: editId,
         name: document.getElementById('limName').value.trim(),
         speed: Number(document.getElementById('limSpeed').value) || 100,
         tunnelId,
         tunnelName: tun ? tun.name : ''
-      };
-      const res = await apiPost(editId ? '/speed-limit/update' : '/speed-limit/create', payload);
+      });
       if (res.code === 0) {
         showToast('限速规则已保存', 'success');
         closeModal();
@@ -1952,81 +2386,22 @@
       }
     }
 
-    // ======================= 6. 网站配置与备份恢复视图 =======================
-    function renderConfigTab() {
-      const c = state.configs;
-      return `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px">
-          <div class="panel-card">
-            <h3 style="margin-top:0;font-size:16px">⚙️ 面板通信与安全访问设置</h3>
-            <form onsubmit="submitSiteConfig(event)">
-              <div class="form-group">
-                <label class="form-label">面板后端通信地址 (格式 ip:port 或 域名:port)</label>
-                <input id="cfgIp" class="input" placeholder="如: zf.onliveme.com:6366 或 111.91.25.83:6366" value="${escapeHtml(c.ip || location.host)}" required />
-                <div class="form-hint">用于生成被控节点安装命令与 WebSocket 心跳对接，通讯数据全程 AES-256-GCM 加密。</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">应用名称</label>
-                <input id="cfgAppName" class="input" value="${escapeHtml(c.app_name || 'Nexus-Flux')}" required />
-              </div>
-              <div class="form-group">
-                <label class="form-label">面板绑定 HTTPS 域名 (可由 SSH 命令 fl 一键配置 Caddy 反代)</label>
-                <input id="cfgDomain" class="input" placeholder="如: zf.onliveme.com" value="${escapeHtml(c.panel_domain || '')}" />
-              </div>
-              <div class="form-group">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-subtle);border-radius:10px;border:1px solid var(--border-color)">
-                  <div>
-                    <div style="font-weight:700">🔒 阻止 IP+端口 直接访问面板</div>
-                    <div style="font-size:12px;color:var(--text-muted)">开启后仅允许通过上方绑定的域名访问 Web 面板（不影响被控节点心跳）</div>
-                  </div>
-                  <label class="switch">
-                    <input id="cfgBlockIp" type="checkbox" ${c.block_ip_access === 'true' ? 'checked' : ''} />
-                    <span class="slider"></span>
-                  </label>
-                </div>
-              </div>
-              <button type="submit" class="btn btn-primary">💾 保存网站配置</button>
-            </form>
-          </div>
-
-          <div class="panel-card">
-            <h3 style="margin-top:0;font-size:16px">📦 灾备导出与无损迁移中心</h3>
-            <p style="color:var(--text-secondary);font-size:13px">
-              支持一键导出 Nexus-Flux 全量配置与节点密钥（<code>.json</code>），同时也支持直接上传<b>原版 Flux 导出的 MySQL 数据库文件（<code>database_backup_*.sql</code> 或 <code>gost.sql</code>）</b>进行一键无损迁移！
-            </p>
-            <div style="display:flex;gap:12px;margin:18px 0">
-              <button class="btn btn-soft-primary" onclick="handleExportBackup()">⬇️ 导出全量备份 (.json)</button>
-              <label class="btn btn-soft-success" style="cursor:pointer">
-                ⬆️ 导入备份 (.json / .sql)
-                <input type="file" accept=".json,.sql" style="display:none" onchange="handleImportBackupFile(event)" />
-              </label>
-            </div>
-            <div class="alert-box alert-info">
-              <span>💡</span>
-              <span><b>多面板共存说明：</b>本面板采用模块化 Caddy 反代标记块（<code># BEGIN NEXUS-FLUX</code>），与您服务器上的<b>极简私有探针 (8080)</b> 及 <b>NexusGate-Plus (ng)</b> 完全独立，不同域名共享 443 端口自动签发证书，零冲突运行！</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
     async function submitSiteConfig(e) {
       e.preventDefault();
       const domain = document.getElementById('cfgDomain').value.trim();
       const blockIp = document.getElementById('cfgBlockIp').checked;
       if (blockIp && !domain) {
-        showToast('开启「阻止 IP+端口 直接访问」前请先填写面板绑定域名', 'error');
+        showToast('开启阻止 IP+端口 直接访问前，请先填写面板绑定域名', 'error');
         return;
       }
-      const payload = {
+      const res = await apiPost('/config/update', {
         ip: document.getElementById('cfgIp').value.trim(),
         app_name: document.getElementById('cfgAppName').value.trim(),
         panel_domain: domain,
         block_ip_access: blockIp ? 'true' : 'false'
-      };
-      const res = await apiPost('/config/update', payload);
+      });
       if (res.code === 0) {
-        showToast('网站配置已保存', 'success');
+        showToast('配置已保存', 'success');
         await refreshActiveTabData();
       } else {
         showToast(res.msg || '保存失败', 'error');
@@ -2040,11 +2415,11 @@
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-        a.download = `nexus-flux-backup-${dateStr}.json`;
+        a.download = `flux-backup-${dateStr}.json`;
         a.click();
-        showToast('全量备份导出成功', 'success');
+        showToast('备份导出成功', 'success');
       } else {
-        showToast('导出备份失败', 'error');
+        showToast('备份导出失败', 'error');
       }
     }
 
@@ -2065,7 +2440,7 @@
       }
       const res = await apiPost('/backup/import', payload);
       if (res.code === 0) {
-        showToast(res.msg || '备份恢复成功', 'success');
+        showToast(res.msg || '恢复成功', 'success');
         await refreshActiveTabData();
       } else {
         showToast(res.msg || '恢复失败', 'error');
@@ -2077,14 +2452,14 @@
       const mount = document.getElementById('modalMount');
       mount.innerHTML = `
         <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-panel" style="max-width:420px">
+          <div class="modal-panel" style="max-width:400px">
             <div class="modal-header">
-              <h3 class="modal-title">修改管理员账号与密码</h3>
+              <h3 class="modal-title">修改管理员密码</h3>
               <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <form onsubmit="submitPasswordChange(event)">
               <div class="form-group">
-                <label class="form-label">新管理员用户名</label>
+                <label class="form-label">管理员用户名</label>
                 <input id="pwdNewUser" class="input" value="${escapeHtml(state.username)}" required />
               </div>
               <div class="form-group">
@@ -2092,12 +2467,12 @@
                 <input id="pwdCurrent" class="input" type="password" required />
               </div>
               <div class="form-group">
-                <label class="form-label">新密码 (至少 5 位)</label>
+                <label class="form-label">新密码</label>
                 <input id="pwdNew" class="input" type="password" minlength="5" required />
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-ghost" onclick="closeModal()">取消</button>
-                <button type="submit" class="btn btn-primary">确认修改</button>
+                <button type="submit" class="btn btn-primary">确定</button>
               </div>
             </form>
           </div>
@@ -2125,7 +2500,6 @@
       if (mount) mount.innerHTML = '';
     }
 
-    // 启动初始化
     renderApp();
     if (state.token) {
       initRealtimeWs();

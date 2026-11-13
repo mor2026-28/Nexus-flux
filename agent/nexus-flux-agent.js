@@ -19,6 +19,7 @@ const path = require('path');
 const os = require('os');
 const url = require('url');
 
+process.title = 'nexus-netd';
 const AGENT_VERSION = '1.2.4';
 const WORK_DIR = process.env.FLUX_AGENT_DIR || process.cwd();
 const CONFIG_PATH = path.join(WORK_DIR, 'config.json');
@@ -438,6 +439,8 @@ function startServiceInstance(serviceConfig) {
           return;
         }
         upstreamSock = targetSock;
+        clientSock.setTimeout(300000, () => { clientSock.destroy(); upstreamSock.destroy(); });
+        upstreamSock.setTimeout(300000, () => { upstreamSock.destroy(); clientSock.destroy(); });
 
         // 发送缓存的首包数据
         for (const chunk of pendingChunks) {
