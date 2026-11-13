@@ -789,6 +789,43 @@ function buildWsFrame(text) {
   return Buffer.concat([header, masked]);
 }
 
+
+// 向主控上报本机当前运行的转发、隧道链与限速器配置 (用于断线重连校准与节点已有转发自动逆向同步)
+function sendConfigReportToMaster() {
+  const rawAddr = String(localConfig.addr || '').trim();
+  if (!rawAddr || !localConfig.secret) return;
+  const isSecure = rawAddr.startsWith('wss://') || rawAddr.startsWith('https://');
+  const cleanHostPort = rawAddr.replace(/^(wss?|https?):\/\//i, '').replace(/\/+$/, '');
+  const { host, port } = splitHostPort(cleanHostPort.includes(':') ? cleanHostPort : `${cleanHostPort}:${isSecure ? 443 : 80}`);
+  const reqMod = isSecure ? https : http;
+
+  const currentConfig = {
+    services: Array.from(activeServices.values()).map(s => s.config),
+    chains: Array.from(chains.values()),
+    limiters: Array.from(limiters.values()).map(l => l.config)
+  };
+
+  const body = wrapEncrypted(currentConfig);
+  const req = reqMod.request({
+    host,
+    port,
+    path: `/flow/config?secret=${encodeURIComponent(localConfig.secret)}`,
+    method: 'POST',
+    rejectUnauthorized: false,
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+      'User-Agent': 'Config-Reporter/1.0'
+    },
+    timeout: 5000
+  }, (res) => {
+    res.resume();
+  });
+  req.on('error', () => {});
+  req.write(body);
+  req.end();
+}
+
 function connectWebSocket() {
   if (wsConnected) return;
   const rawAddr = String(localConfig.addr || '').trim();
@@ -825,6 +862,7 @@ function connectWebSocket() {
     wsSocket = socket;
     wsConnected = true;
     console.log(`[Flux-Agent] ✅ 已连接主控: ${cleanHostPort} (version=${AGENT_VERSION})`);
+    setTimeout(() => sendConfigReportToMaster(), 300);
 
     let rxBuf = Buffer.alloc(0);
     socket.on('data', async (chunk) => {
