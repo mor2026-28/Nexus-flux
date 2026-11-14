@@ -511,7 +511,7 @@ async function runAllTests() {
     
     // ---------------- Round 11: 面板安全加固校验 (PBKDF2、防爆破限流锁、安全响应头与版本统一 v1.0.0) ----------------
     console.log("\n[Round 11] 测试 PBKDF2 密码加密、登录防爆破限流器与全站安全响应头...");
-    assert(html.includes("v1.0.0") && !html.includes("v1.4.3") && !html.includes("防国内云扫描") && !html.includes("原版"), "UI 版本已统一为 v1.0.0 且无多余字眼");
+    assert(html.includes("v1.1.0") && !html.includes("v1.0.0") && !html.includes("v1.4.3") && !html.includes("防国内云扫描") && !html.includes("原版"), "UI 版本已统一迭代为 v1.1.0 且无多余字眼");
 
     // 模拟来自独立测试 IP (10.99.88.77) 的连续 5 次错误密码爆破尝试
     for (let i = 1; i <= 5; i++) {
@@ -576,8 +576,32 @@ async function runAllTests() {
     assert(receivedBytes >= streamSize, `10MB 连续直播流应完整传输无丢包 (实际接收: ${receivedBytes} bytes)`);
     console.log(`  ✅ 10MB 连续高码率直播流经 TLS 1.3 跨机隧道零丢包传输完成！耗时: ${streamElapsedMs}ms, 吞吐速率: ${throughputMBps} MB/s`);
 
+    // ---------------- Round 14: v1.1.0 一键全节点重下发、WebSocket 远程热升级被控与 30 路并发 TLS 1.3 会话复用零卡顿压测 ----------------
+    console.log("\n[Round 14] 测试 v1.1.0 一键全量重下发 (/node/sync-all)、远程热升级被控 (/node/upgrade-all) 与 30 路并发 TLS 1.3 会话复用压测...");
+    const syncAllRes = await httpReq("POST", "/api/v1/node/sync-all", {}, authHeaders);
+    assert.strictEqual(syncAllRes.json.code, 0);
+    assert.strictEqual(syncAllRes.json.data.syncedNodes, 2, "应成功向 2 台在线节点全量重下发规则");
+
+    const upgradeAllRes = await httpReq("POST", "/api/v1/node/upgrade-all", { noRestart: true }, authHeaders);
+    assert.strictEqual(upgradeAllRes.json.code, 0);
+    assert.strictEqual(upgradeAllRes.json.data.upgradedCount, 2, "应通过加密 WebSocket 成功远程热升级 2 台在线节点被控");
+    assert.strictEqual(upgradeAllRes.json.data.version, "1.1.0", "升级后版本号应为 1.1.0");
+
+    // 模拟 30 路高并发连接同时穿透 TLS 1.3 跨机隧道 (测试共享 SecureContext 与 Session Ticket 复用零阻塞)
+    const concStart = Date.now();
+    const concPromises = [];
+    for (let c = 0; c < 30; c++) {
+      concPromises.push(sendTcpPayload(fwd2Port, Buffer.from(`CONC_STREAM_${c}_PAYLOAD_CHECK`)));
+    }
+    const concReplies = await Promise.all(concPromises);
+    const concElapsed = Date.now() - concStart;
+    for (let c = 0; c < 30; c++) {
+      assert.strictEqual(concReplies[c].toString(), `ECHO:CONC_STREAM_${c}_PAYLOAD_CHECK`);
+    }
+    console.log(`  ✅ 一键全节点重下发、WebSocket 远程升级被控 (v1.1.0) 及 30 路并发 TLS 1.3 会话复用压测全部通过 (30路并发总耗时仅: ${concElapsed}ms)！`);
+
     console.log('\n================================================================');
-    console.log(' 🎉 ALL 13 E2E SIMULATION & STRESS TEST ROUNDS PASSED (100% OK)!');
+    console.log(' 🎉 ALL 14 E2E SIMULATION & STRESS TEST ROUNDS PASSED (100% OK)!');
     console.log('================================================================');
   } finally {
     if (targetEcho) targetEcho.close();

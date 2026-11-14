@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Nexus-Flux · 端口转发与加密隧道主控服务端 (Master Server)
- * Version: v1.0.0
+ * Version: v1.1.0
  */
 
 'use strict';
@@ -16,8 +16,8 @@ const net = require('net');
 const os = require('os');
 
 // ======================= 配置与全局变量 =======================
-const VERSION = '1.0.0';
-const PANEL_VERSION = 'v1.0.0';
+const VERSION = '1.1.0';
+const PANEL_VERSION = 'v1.1.0';
 const DATA_DIR = process.env.NEXUS_FLUX_DATA_DIR || path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'flux-db.json');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
@@ -599,6 +599,167 @@ const GostBuilder = {
   }
 };
 
+// ======================= 节点配置自动纳管与全节点批量操作 =======================
+function adoptNodeReportedConfig(node, gostConfig) {
+  if (!node || !gostConfig) return;
+  const services = Array.isArray(gostConfig.services) ? gostConfig.services : [];
+  const chainsList = Array.isArray(gostConfig.chains) ? gostConfig.chains : [];
+  let changed = false;
+
+  const chainMap = new Map();
+  for (const c of chainsList) {
+    if (c && c.name) chainMap.set(String(c.name), c);
+  }
+
+  for (const svc of services) {
+    if (!svc || !svc.name || svc.name === 'web_api') continue;
+    const nameStr = String(svc.name);
+    if (!nameStr.endsWith('_tcp')) continue;
+
+    const addrStr = String(svc.addr || '');
+    const lastColon = addrStr.lastIndexOf(':');
+    const inPort = lastColon !== -1 ? Number(addrStr.slice(lastColon + 1)) : 0;
+    if (!inPort) continue;
+
+    // 检查该入口节点的 inPort 是否已在面板中存在
+    const existingFwd = db.forwards.find(f => {
+      const t = db.tunnels.find(tu => Number(tu.id) === Number(f.tunnelId));
+      return t && Number(t.inNodeId) === Number(node.id) && Number(f.inPort) === inPort;
+    });
+    if (existingFwd) continue;
+
+    const chainName = svc.handler && svc.handler.chain;
+    if (chainName && chainMap.has(String(chainName))) {
+      const cObj = chainMap.get(String(chainName));
+      const hopNode = cObj && Array.isArray(cObj.hops) && cObj.hops[0] && Array.isArray(cObj.hops[0].nodes) && cObj.hops[0].nodes[0];
+      if (!hopNode || !hopNode.addr) continue;
+      const parsedHop = splitHostPort(hopNode.addr);
+      if (!parsedHop) continue;
+      const outNode = db.nodes.find(n => n.serverIp === parsedHop.host || n.ip === parsedHop.host);
+      if (!outNode) continue;
+
+      const proto = (hopNode.dialer && hopNode.dialer.type) || 'tls';
+      let tunnel = db.tunnels.find(t => Number(t.type) === 2 && Number(t.inNodeId) === Number(node.id) && Number(t.outNodeId) === Number(outNode.id));
+      if (!tunnel) {
+        tunnel = {
+          id: db.meta.nextIds.tunnel++,
+          name: `${node.name}-${outNode.name}`,
+          type: 2,
+          inNodeId: node.id,
+          inIp: node.ip || node.serverIp,
+          outNodeId: outNode.id,
+          outIp: outNode.serverIp,
+          protocol: proto,
+          tcpListenAddr: '[::]',
+          udpListenAddr: '[::]',
+          interfaceName: '',
+          flow: 1,
+          trafficRatio: 1.0,
+          status: 1,
+          createdTime: Date.now(),
+          updatedTime: Date.now()
+        };
+        db.tunnels.push(tunnel);
+        changed = true;
+      }
+
+      const fwdId = db.meta.nextIds.forward++;
+      db.forwards.push({
+        id: fwdId,
+        userId: 1,
+        userName: db.admin.user,
+        name: `${node.name}-${outNode.name}-${inPort}`,
+        tunnelId: tunnel.id,
+        inPort: inPort,
+        outPort: parsedHop.port,
+        remoteAddr: `${ parsedHop.host }:${ parsedHop.port }`,
+        strategy: 'fifo',
+        interfaceName: '',
+        speedId: null,
+        inFlow: 0,
+        outFlow: 0,
+        createdTime: Date.now(),
+        updatedTime: Date.now(),
+        status: 1,
+        inx: db.forwards.length
+      });
+      changed = true;
+    } else if (svc.forwarder && Array.isArray(svc.forwarder.nodes) && svc.forwarder.nodes.length > 0) {
+      const remoteAddr = svc.forwarder.nodes.map(n => n.addr).filter(Boolean).join(',');
+      if (!remoteAddr) continue;
+      let tunnel = db.tunnels.find(t => Number(t.type) === 1 && Number(t.inNodeId) === Number(node.id));
+      if (!tunnel) {
+        tunnel = {
+          id: db.meta.nextIds.tunnel++,
+          name: `${node.name}-直转`,
+          type: 1,
+          inNodeId: node.id,
+          inIp: node.ip || node.serverIp,
+          outNodeId: node.id,
+          outIp: node.serverIp,
+          protocol: null,
+          tcpListenAddr: '[::]',
+          udpListenAddr: '[::]',
+          interfaceName: '',
+          flow: 1,
+          trafficRatio: 1.0,
+          status: 1,
+          createdTime: Date.now(),
+          updatedTime: Date.now()
+        };
+        db.tunnels.push(tunnel);
+        changed = true;
+      }
+      const fwdId = db.meta.nextIds.forward++;
+      db.forwards.push({
+        id: fwdId,
+        userId: 1,
+        userName: db.admin.user,
+        name: `${node.name}-${inPort}`,
+        tunnelId: tunnel.id,
+        inPort: inPort,
+        outPort: null,
+        remoteAddr,
+        strategy: (svc.forwarder.selector && svc.forwarder.selector.strategy) || 'fifo',
+        interfaceName: (svc.metadata && svc.metadata.interface) || '',
+        speedId: null,
+        inFlow: 0,
+        outFlow: 0,
+        createdTime: Date.now(),
+        updatedTime: Date.now(),
+        status: 1,
+        inx: db.forwards.length
+      });
+      changed = true;
+    }
+  }
+
+  // Also check relay _tls services on exit nodes to update remoteAddr of adopted tunnel forwards
+  for (const svc of services) {
+    if (!svc || !svc.name || !String(svc.name).endsWith('_tls')) continue;
+    const addrStr = String(svc.addr || '');
+    const lastColon = addrStr.lastIndexOf(':');
+    const outPort = lastColon !== -1 ? Number(addrStr.slice(lastColon + 1)) : 0;
+    if (!outPort || !svc.forwarder || !Array.isArray(svc.forwarder.nodes) || svc.forwarder.nodes.length === 0) continue;
+    const realRemoteAddr = svc.forwarder.nodes.map(n => n.addr).filter(Boolean).join(',');
+    if (!realRemoteAddr) continue;
+
+    for (const fwd of db.forwards) {
+      const t = db.tunnels.find(tu => Number(tu.id) === Number(fwd.tunnelId));
+      if (t && Number(t.type) === 2 && Number(t.outNodeId) === Number(node.id) && Number(fwd.outPort) === outPort) {
+        if (fwd.remoteAddr !== realRemoteAddr) {
+          fwd.remoteAddr = realRemoteAddr;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  if (changed) {
+    saveDbSync();
+  }
+}
+
 // ======================= 节点上线自动全量状态同步 =======================
 async function syncNodeDesiredState(nodeId) {
   const numNodeId = Number(nodeId);
@@ -913,7 +1074,7 @@ function parseFluxSqlDump(sqlText) {
           serverIp: obj.server_ip || obj.ip || '',
           portSta: Number(obj.port_sta) || 1000,
           portEnd: Number(obj.port_end) || 65535,
-          version: obj.version || '1.0.0',
+          version: obj.version || '1.1.0',
           http: Number(obj.http) || 0,
           tls: Number(obj.tls) || 0,
           socks: Number(obj.socks) || 0,
@@ -1094,25 +1255,8 @@ async function handleHttpRequest(req, res) {
       const rawBody = await readRequestBody(req);
       const decrypted = unwrapEncryptedMessage(rawBody, secret);
       const gostConfig = JSON.parse(decrypted);
-      // 自动清理被控节点上已删除的孤立转发服务
-      if (gostConfig && Array.isArray(gostConfig.services)) {
-        for (const svc of gostConfig.services) {
-          if (!svc.name || svc.name === 'web_api') continue;
-          const parts = String(svc.name).split('_');
-          if (parts.length === 4) {
-            const fwdId = Number(parts[0]);
-            const svcPrefix = `${parts[0]}_${parts[1]}_${parts[2]}`;
-            const typeSuffix = parts[3];
-            const exists = db.forwards.some(f => Number(f.id) === fwdId);
-            if (!exists) {
-              if (typeSuffix === 'tcp') {
-                sendNodeCommand(node.id, 'DeleteService', { services: [`${svcPrefix}_tcp`, `${svcPrefix}_udp`] });
-              } else if (typeSuffix === 'tls') {
-                sendNodeCommand(node.id, 'DeleteService', { services: [`${svcPrefix}_tls`] });
-              }
-            }
-          }
-        }
+      if (gostConfig && typeof gostConfig === 'object') {
+        adoptNodeReportedConfig(node, gostConfig);
       }
     } catch (e) {}
     sendText(res, 200, 'ok');
@@ -1418,6 +1562,63 @@ async function handleHttpRequest(req, res) {
         secret: node.secret,
         serverAddr: cleanAddr
       }));
+      return;
+    }
+
+    if (subPath === '/node/sync-all') {
+      const onlineIds = Array.from(nodeSessions.keys());
+      let syncedNodes = 0;
+      for (const nId of onlineIds) {
+        try {
+          await syncNodeDesiredState(nId);
+          syncedNodes++;
+        } catch (e) {}
+      }
+      sendJson(res, 200, R.okData({
+        onlineNodes: onlineIds.length,
+        syncedNodes,
+        totalTunnels: db.tunnels.length,
+        totalForwards: db.forwards.length,
+        version: PANEL_VERSION
+      }, `已向 ${syncedNodes} 台在线节点全量重新下发并校准 ${db.forwards.length} 条转发规则`));
+      return;
+    }
+
+    if (subPath === '/node/upgrade-all') {
+      if (!fs.existsSync(AGENT_SCRIPT_PATH)) {
+        sendJson(res, 200, R.err('主控未找到内置被控脚本文件'));
+        return;
+      }
+      const agentCode = fs.readFileSync(AGENT_SCRIPT_PATH, 'utf8');
+      const targetNodeId = bodyObj && bodyObj.nodeId ? Number(bodyObj.nodeId) : null;
+      const noRestart = Boolean(bodyObj && bodyObj.noRestart);
+      const onlineIds = targetNodeId ? (nodeSessions.has(targetNodeId) ? [targetNodeId] : []) : Array.from(nodeSessions.keys());
+
+      let upgradedCount = 0;
+      let syncedCount = 0;
+      for (const nId of onlineIds) {
+        try {
+          const upRes = await sendNodeCommand(nId, 'UpgradeAgent', {
+            code: agentCode,
+            version: VERSION,
+            noRestart
+          }, 6000);
+          if (upRes && upRes.success) {
+            upgradedCount++;
+            const nodeObj = db.nodes.find(n => Number(n.id) === Number(nId));
+            if (nodeObj) nodeObj.version = VERSION;
+          }
+          await syncNodeDesiredState(nId);
+          syncedCount++;
+        } catch (e) {}
+      }
+      saveDbSync();
+      sendJson(res, 200, R.okData({
+        onlineNodes: onlineIds.length,
+        upgradedCount,
+        syncedCount,
+        version: VERSION
+      }, `已完成 ${upgradedCount}/${onlineIds.length} 台在线节点被控热升级 (v${VERSION}) 并全量重下发规则`));
       return;
     }
 
@@ -1861,6 +2062,8 @@ async function handleHttpRequest(req, res) {
       sendJson(res, 200, R.okData({
         forwardId: fwd.id,
         forwardName: fwd.name,
+        tunnelName: tunnel.name,
+        remoteAddr: fwd.remoteAddr,
         tunnelType: Number(tunnel.type) === 1 ? '端口转发' : '隧道转发',
         results,
         timestamp: Date.now()
@@ -2158,7 +2361,7 @@ function handleWsUpgrade(req, socket, head) {
     }
     wsMeta.nodeId = Number(node.id);
     wsMeta.secret = secret;
-    wsMeta.version = query.version ? String(query.version) : '1.0.0';
+    wsMeta.version = query.version ? String(query.version) : '1.1.0';
     wsMeta.http = query.http !== undefined ? Number(query.http) : node.http;
     wsMeta.tls = query.tls !== undefined ? Number(query.tls) : node.tls;
     wsMeta.socks = query.socks !== undefined ? Number(query.socks) : node.socks;

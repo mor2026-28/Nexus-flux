@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Nexus-Flux · 节点转发与隧道服务程序 (Node Agent)
- * Version: 1.0.0
+ * Version: 1.1.0
  */
 
 'use strict';
@@ -18,7 +18,7 @@ const os = require('os');
 const url = require('url');
 
 process.title = 'nexus-netd';
-const AGENT_VERSION = '1.0.0';
+const AGENT_VERSION = '1.1.0';
 
 const RELAY_TLS_KEY = `-----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgiX6yxZvTOJclOPxf
@@ -36,6 +36,17 @@ nicwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiEA4tTq0lCJ51di
 9oPlxs9CHcjcbCgNZ3eSlZlpMgOA82oCIBjbi7Y/0CAAYiuA5gPnvvdqbIz6Ynn6
 81+WSXCQiYrp
 -----END CERTIFICATE-----`;
+
+// 预编译全局共享 TLS 上下文与 Session Ticket 缓存，消除单核 VPS 每次建连同步解析证书导致的事件循环阻塞
+const RELAY_SERVER_TLS_CTX = tls.createSecureContext({
+  key: RELAY_TLS_KEY,
+  cert: RELAY_TLS_CERT,
+  minVersion: 'TLSv1.2'
+});
+const RELAY_CLIENT_TLS_CTX = tls.createSecureContext({
+  minVersion: 'TLSv1.2'
+});
+const tlsSessionCache = new Map(); // "host:port" -> Buffer
 
 function tuneTcpSocket(sock) {
   if (!sock || sock.destroyed) return;
@@ -67,11 +78,10 @@ function loadLocalConfig() {
       console.error('[Flux-Agent] 读取 config.json 失败:', e.message);
     }
   }
-  // 支持命令行参数 -a <addr> -s <secret> -V
   const args = process.argv.slice(2);
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-V' || args[i] === '--version') {
-      console.log(`gost ${AGENT_VERSION} (Nexus-Flux Light Engine ${process.version} ${os.platform()}/${os.arch()})`);
+      console.log(`gost ${AGENT_VERSION} (${process.version} ${os.platform()}/${os.arch()})`);
       process.exit(0);
     }
     if (args[i] === '-a' && args[i + 1]) localConfig.addr = args[++i];
@@ -136,19 +146,16 @@ function unwrapEncrypted(rawStr) {
 // ======================= 协议嗅探与阻断 (HTTP / TLS / SOCKS) =======================
 function isBlockedProtocolPacket(buf) {
   if (!buf || buf.length < 3) return null;
-  // 1. 检测 SOCKS4 / SOCKS5
   if (Number(localConfig.socks) === 1) {
     if ((buf[0] === 0x05 && buf[1] >= 1 && buf[1] <= 10) || (buf[0] === 0x04 && (buf[1] === 0x01 || buf[1] === 0x02))) {
       return 'SOCKS';
     }
   }
-  // 2. 检测 TLS Handshake ClientHello (0x16 0x03 0x01..0x04)
   if (Number(localConfig.tls) === 1) {
     if (buf[0] === 0x16 && buf[1] === 0x03 && buf[2] >= 0x00 && buf[2] <= 0x04) {
       return 'TLS';
     }
   }
-  // 3. 检测 HTTP 明文请求与 HTTP/2 Preface
   if (Number(localConfig.http) === 1) {
     const head = buf.subarray(0, Math.min(buf.length, 8)).toString('ascii');
     if (
@@ -170,13 +177,12 @@ function isBlockedProtocolPacket(buf) {
 }
 
 // ======================= 令牌桶限速器管理 =======================
-const limiters = new Map(); // name -> { bytesPerSec, config }
+const limiters = new Map();
 
 function parseLimiterBytesPerSec(limiterCfg) {
   if (!limiterCfg || !Array.isArray(limiterCfg.limits) || limiterCfg.limits.length === 0) {
     return 0;
   }
-  // 格式: "$ 12.5MB 12.5MB"
   const line = String(limiterCfg.limits[0]);
   const m = line.match(/([\d.]+)\s*(MB|KB|GB|B)/i);
   if (!m) return 0;
@@ -189,9 +195,9 @@ function parseLimiterBytesPerSec(limiterCfg) {
 }
 
 // ======================= 转发链与服务注册表 =======================
-const chains = new Map();           // chainName -> chainConfig
-const activeServices = new Map();   // serviceName -> { config, server, udpSocket, paused, rrIndex }
-const trafficDeltas = new Map();    // serviceBaseName ("forwardId_userId_userTunnelId") -> { u: 0, d: 0 }
+const chains = new Map();
+const activeServices = new Map();
+const trafficDeltas = new Map();
 
 function recordTraffic(serviceName, upBytes, downBytes) {
   if (!serviceName || serviceName === 'web_api') return;
@@ -205,14 +211,17 @@ function recordTraffic(serviceName, upBytes, downBytes) {
   item.d += downBytes;
 }
 
+function getGostStateObject() {
+  return {
+    services: Array.from(activeServices.values()).map(s => s.config),
+    chains: Array.from(chains.values()),
+    limiters: Array.from(limiters.values()).map(l => l.config)
+  };
+}
+
 function saveGostJsonState() {
   try {
-    const state = {
-      services: Array.from(activeServices.values()).map(s => s.config),
-      chains: Array.from(chains.values()),
-      limiters: Array.from(limiters.values()).map(l => l.config)
-    };
-    fs.writeFileSync(GOST_JSON_PATH, JSON.stringify(state, null, 2), 'utf8');
+    fs.writeFileSync(GOST_JSON_PATH, JSON.stringify(getGostStateObject(), null, 2), 'utf8');
   } catch (e) {}
 }
 
@@ -263,7 +272,6 @@ function selectTargetNode(svcEntry, clientIp = '') {
     const idx = Math.abs(hash) % nodes.length;
     return splitHostPort(nodes[idx].addr);
   }
-  // 默认 fifo：按顺序选取首个可用目标
   return splitHostPort(nodes[0].addr);
 }
 
@@ -293,6 +301,7 @@ function dialWithFailover(svcEntry, clientIp, callback) {
       dialOpts.localAddress = cfg.metadata.interface;
     }
     const sock = net.connect(dialOpts);
+    tuneTcpSocket(sock);
     let connected = false;
     sock.once('connect', () => {
       connected = true;
@@ -316,7 +325,7 @@ function dialWithFailover(svcEntry, clientIp, callback) {
   tryNext();
 }
 
-// 连接到隧道链出口节点 (支持 TLS 1.3 加密隧道封装与 TCP_NODELAY 低延迟流控)
+// 连接到隧道链出口节点 (支持共享 TLS 上下文 + TLS 1.3 Session Ticket 零开销复用)
 function dialChainHop(chainName, callback) {
   const chainCfg = chains.get(chainName);
   if (!chainCfg || !Array.isArray(chainCfg.hops) || !chainCfg.hops[0] || !Array.isArray(chainCfg.hops[0].nodes) || !chainCfg.hops[0].nodes[0]) {
@@ -344,11 +353,21 @@ function dialChainHop(chainName, callback) {
       connected = true;
       return callback(null, rawSock);
     }
+    const sessionKey = `${target.host}:${target.port}`;
+    const cachedSession = tlsSessionCache.get(sessionKey);
     const tlsSock = tls.connect({
       socket: rawSock,
+      secureContext: RELAY_CLIENT_TLS_CTX,
       servername: 'www.apple.com',
       rejectUnauthorized: false,
-      ALPNProtocols: ['h2', 'http/1.1']
+      ALPNProtocols: ['h2', 'http/1.1'],
+      session: cachedSession || undefined
+    });
+    tlsSock.on('session', (sess) => {
+      if (sess && sess.length > 0) {
+        if (tlsSessionCache.size > 256) tlsSessionCache.clear();
+        tlsSessionCache.set(sessionKey, sess);
+      }
     });
     tlsSock.once('secureConnect', () => {
       connected = true;
@@ -356,6 +375,7 @@ function dialChainHop(chainName, callback) {
       callback(null, tlsSock);
     });
     tlsSock.once('error', (err) => {
+      tlsSessionCache.delete(sessionKey);
       if (!connected) {
         tlsSock.destroy();
         callback(err);
@@ -397,7 +417,6 @@ function startServiceInstance(serviceConfig) {
   };
 
   if (handlerType === 'udp') {
-    // UDP 转发服务
     const udpType = host.includes(':') ? 'udp6' : 'udp4';
     const udpSocket = dgram.createSocket({ type: udpType, reuseAddr: true });
     const sessions = new Map();
@@ -467,7 +486,7 @@ function startServiceInstance(serviceConfig) {
     return;
   }
 
-  // TCP / Relay 服务 (支持 TLS 1.3 自动解封装、拨号期零丢包缓冲、TCP_NODELAY 零延迟与内核背压流控)
+  // TCP / Relay 服务 (支持并行预拨号、共享 TLS 1.3 上下文、拨号期零丢包缓冲、TCP_NODELAY 与双向背压流控)
   const server = net.createServer({ allowHalfOpen: true }, (rawClientSock) => {
     if (entry.paused) {
       rawClientSock.destroy();
@@ -478,7 +497,6 @@ function startServiceInstance(serviceConfig) {
     let upstreamSock = null;
 
     const startBridge = (activeClientStream, preBufferedChunks) => {
-      // 在上游连接建立完成前暂停并缓冲客户端流，防止跨境拨号耗时窗口内后续数据包丢失导致 Shadowsocks/AEAD 解密断流
       const pendingChunks = Array.isArray(preBufferedChunks) ? preBufferedChunks.slice() : [];
       activeClientStream.pause();
       const onPreConnectData = (chunk) => {
@@ -509,15 +527,14 @@ function startServiceInstance(serviceConfig) {
         upstreamSock = targetSock;
         tuneTcpSocket(upstreamSock);
 
-        rawClientSock.setTimeout(300000, () => { activeClientStream.destroy(); upstreamSock.destroy(); });
-        upstreamSock.setTimeout(300000, () => { upstreamSock.destroy(); activeClientStream.destroy(); });
+        rawClientSock.setTimeout(180000, () => { activeClientStream.destroy(); upstreamSock.destroy(); });
+        upstreamSock.setTimeout(180000, () => { upstreamSock.destroy(); activeClientStream.destroy(); });
 
         const limiterObj = serviceConfig.limiter ? limiters.get(String(serviceConfig.limiter)) : null;
         const maxBytesPerSec = limiterObj ? limiterObj.bytesPerSec : 0;
         let windowStart = Date.now();
         let windowBytes = 0;
 
-        // 先将拨号窗口期缓冲的首包及后续包完整写入上游
         let initialBackpressure = false;
         for (const chunk of pendingChunks) {
           recordTraffic(name, chunk.length, 0);
@@ -527,7 +544,6 @@ function startServiceInstance(serviceConfig) {
         }
         pendingChunks.length = 0;
 
-        // 客户端 -> 目标端 (含背压控制与限速控制)
         activeClientStream.on('data', (chunk) => {
           recordTraffic(name, chunk.length, 0);
           if (upstreamSock.destroyed) return;
@@ -557,7 +573,6 @@ function startServiceInstance(serviceConfig) {
           if (!activeClientStream.destroyed) activeClientStream.resume();
         });
 
-        // 目标端 -> 客户端 (含完整背压流控，消除直播大流量缓冲卡顿)
         upstreamSock.on('data', (chunk) => {
           recordTraffic(name, 0, chunk.length);
           if (activeClientStream.destroyed) return;
@@ -571,7 +586,7 @@ function startServiceInstance(serviceConfig) {
           if (!upstreamSock.destroyed) upstreamSock.resume();
         });
 
-        // 优雅半关闭 (Half-Close) 处理，确保双向缓冲区数据 100% 排空
+        // 优雅半关闭 (Half-Close) + 闭环生命周期销毁，杜绝半开僵尸连接堆积
         activeClientStream.once('end', () => {
           try { upstreamSock.end(); } catch (e) {}
         });
@@ -579,8 +594,25 @@ function startServiceInstance(serviceConfig) {
           try { activeClientStream.end(); } catch (e) {}
         });
 
-        activeClientStream.on('error', () => upstreamSock.destroy());
-        upstreamSock.on('error', () => activeClientStream.destroy());
+        activeClientStream.once('close', () => {
+          try { upstreamSock.destroy(); } catch (e) {}
+          try { rawClientSock.destroy(); } catch (e) {}
+        });
+        upstreamSock.once('close', () => {
+          try { activeClientStream.end(); } catch (e) {}
+          const t = setTimeout(() => {
+            try { activeClientStream.destroy(); } catch (e) {}
+            try { rawClientSock.destroy(); } catch (e) {}
+          }, 1500);
+          if (t.unref) t.unref();
+        });
+
+        activeClientStream.on('error', () => {
+          try { upstreamSock.destroy(); } catch (e) {}
+        });
+        upstreamSock.on('error', () => {
+          try { activeClientStream.destroy(); } catch (e) {}
+        });
 
         if (clientEndedEarly) {
           try { upstreamSock.end(); } catch (e) {}
@@ -590,37 +622,46 @@ function startServiceInstance(serviceConfig) {
       });
     };
 
-    rawClientSock.once('data', (firstChunk) => {
-      if (handlerType === 'relay') {
-        // 出口 Relay 节点自动检测首字节是否为 TLS 1.3/1.2 握手 (0x16 0x03)
-        if (firstChunk.length >= 3 && firstChunk[0] === 0x16 && firstChunk[1] === 0x03) {
-          const tlsServerSock = new tls.TLSSocket(rawClientSock, {
-            isServer: true,
-            key: RELAY_TLS_KEY,
-            cert: RELAY_TLS_CERT
-          });
-          tuneTcpSocket(tlsServerSock);
-          tlsServerSock.on('error', () => {
-            if (upstreamSock) upstreamSock.destroy();
+    const needProtocolSniff = (
+      Number(localConfig.http) === 1 ||
+      Number(localConfig.tls) === 1 ||
+      Number(localConfig.socks) === 1
+    );
+
+    // 当入口节点未开启协议屏蔽时，TCP 握手完成瞬间立即发起下一跳零等待预拨号 (省去等待客户端首包的 1 个 RTT)
+    if (handlerType !== 'relay' && !needProtocolSniff) {
+      startBridge(rawClientSock, []);
+    } else {
+      rawClientSock.once('data', (firstChunk) => {
+        if (handlerType === 'relay') {
+          if (firstChunk.length >= 3 && firstChunk[0] === 0x16 && firstChunk[1] === 0x03) {
+            const tlsServerSock = new tls.TLSSocket(rawClientSock, {
+              isServer: true,
+              secureContext: RELAY_SERVER_TLS_CTX,
+              allowHalfOpen: true
+            });
+            tuneTcpSocket(tlsServerSock);
+            tlsServerSock.on('error', () => {
+              if (upstreamSock) upstreamSock.destroy();
+              rawClientSock.destroy();
+            });
+            rawClientSock.unshift(firstChunk);
+            startBridge(tlsServerSock, []);
+            return;
+          }
+          rawClientSock.pause();
+          startBridge(rawClientSock, [firstChunk]);
+        } else {
+          const blockedProto = isBlockedProtocolPacket(firstChunk);
+          if (blockedProto) {
             rawClientSock.destroy();
-          });
-          rawClientSock.unshift(firstChunk);
-          startBridge(tlsServerSock, []);
-          return;
+            return;
+          }
+          rawClientSock.pause();
+          startBridge(rawClientSock, [firstChunk]);
         }
-        rawClientSock.pause();
-        startBridge(rawClientSock, [firstChunk]);
-      } else {
-        // 入口节点检测是否命中协议屏蔽 (HTTP / TLS / SOCKS)
-        const blockedProto = isBlockedProtocolPacket(firstChunk);
-        if (blockedProto) {
-          rawClientSock.destroy();
-          return;
-        }
-        rawClientSock.pause();
-        startBridge(rawClientSock, [firstChunk]);
-      }
-    });
+      });
+    }
 
     rawClientSock.on('error', () => {
       if (upstreamSock) upstreamSock.destroy();
@@ -711,7 +752,7 @@ function collectSystemInfo() {
   };
 }
 
-// ======================= TCP Ping 诊断实现 =======================
+// ======================= TCP Ping 诊断实现 (优雅关闭 + 抗单次 SYN 重传虚高滤波) =======================
 function executeTcpPing(reqData) {
   return new Promise((resolve) => {
     const ip = String(reqData.ip || '').trim();
@@ -720,10 +761,7 @@ function executeTcpPing(reqData) {
     const timeoutMs = Math.min(10000, Math.max(500, Number(reqData.timeout) || 3000));
 
     let completed = 0;
-    let successCount = 0;
-    let totalTimeMs = 0;
-    let minTimeMs = Infinity;
-    let maxTimeMs = 0;
+    const samples = [];
     let lastErr = '';
 
     function runOnce() {
@@ -735,19 +773,17 @@ function executeTcpPing(reqData) {
       const finish = (ok, errMsg) => {
         if (done) return;
         done = true;
-        sock.destroy();
+        try { sock.end(); } catch (e) {}
+        try { sock.destroy(); } catch (e) {}
         const elapsedMs = Number(process.hrtime.bigint() - start) / 1e6;
         if (ok) {
-          successCount++;
-          totalTimeMs += elapsedMs;
-          if (elapsedMs < minTimeMs) minTimeMs = elapsedMs;
-          if (elapsedMs > maxTimeMs) maxTimeMs = elapsedMs;
+          samples.push(elapsedMs);
         } else {
           lastErr = errMsg || '连接超时';
         }
         completed++;
         if (completed >= count) {
-          if (successCount === 0) {
+          if (samples.length === 0) {
             resolve({
               ip,
               port,
@@ -761,7 +797,16 @@ function executeTcpPing(reqData) {
               requestId: reqData.requestId
             });
           } else {
-            const avg = totalTimeMs / successCount;
+            // 若采样数 >= 3 且最高值属于单次 Linux 1000ms SYN 重传噪点 (> 800ms 且超过中位数 3.5 倍)，剔除该单次重传噪点计算真实延迟与抖动
+            const sorted = samples.slice().sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            let effective = sorted;
+            if (sorted.length >= 3 && sorted[sorted.length - 1] > 800 && sorted[sorted.length - 1] > median * 3.5) {
+              effective = sorted.slice(0, sorted.length - 1);
+            }
+            const minTimeMs = effective[0];
+            const maxTimeMs = effective[effective.length - 1];
+            const avg = effective.reduce((a, b) => a + b, 0) / effective.length;
             const jitter = Math.max(0, maxTimeMs - minTimeMs);
             resolve({
               ip,
@@ -771,12 +816,12 @@ function executeTcpPing(reqData) {
               minTime: Number(minTimeMs.toFixed(2)),
               maxTime: Number(maxTimeMs.toFixed(2)),
               jitter: Number(jitter.toFixed(2)),
-              packetLoss: Number((((count - successCount) / count) * 100).toFixed(1)),
+              packetLoss: Number((((count - samples.length) / count) * 100).toFixed(1)),
               requestId: reqData.requestId
             });
           }
         } else {
-          setTimeout(runOnce, 60);
+          setTimeout(runOnce, 75);
         }
       };
 
@@ -879,6 +924,24 @@ async function handleMasterCommand(cmd) {
         response.data = await executeTcpPing(data || {});
         break;
       }
+      case 'UpgradeAgent': {
+        if (data && typeof data.code === 'string' && data.code.includes('AGENT_VERSION')) {
+          const targetScript = process.argv[1] || path.join(WORK_DIR, 'nexus-agent.js');
+          const tmpScript = `${targetScript}.new`;
+          fs.writeFileSync(tmpScript, data.code, { encoding: 'utf8', mode: 0o755 });
+          fs.renameSync(tmpScript, targetScript);
+          response.message = `Upgraded to ${data.version || 'latest'}`;
+          if (!data.noRestart) {
+            setTimeout(() => {
+              process.exit(0);
+            }, 350).unref();
+          }
+        } else {
+          response.success = false;
+          response.message = 'Invalid agent script payload';
+        }
+        break;
+      }
       default:
         break;
     }
@@ -890,7 +953,7 @@ async function handleMasterCommand(cmd) {
   return response;
 }
 
-// ======================= 原生 WebSocket 客户端与 HTTP 流量上报 =======================
+// ======================= 原生 WebSocket 客户端与 HTTP 流量/配置上报 =======================
 let wsSocket = null;
 let wsConnected = false;
 let reconnectTimer = null;
@@ -923,6 +986,35 @@ function buildWsFrame(text) {
     masked[i] = payload[i] ^ maskKey[i & 3];
   }
   return Buffer.concat([header, masked]);
+}
+
+function reportLocalConfigToMaster() {
+  const rawAddr = String(localConfig.addr || '').trim();
+  if (!rawAddr || !localConfig.secret) return;
+  const isSecure = rawAddr.startsWith('wss://') || rawAddr.startsWith('https://');
+  const cleanHostPort = rawAddr.replace(/^(wss?|https?):\/\//i, '').replace(/\/+$/, '');
+  const { host, port } = splitHostPort(cleanHostPort.includes(':') ? cleanHostPort : `${cleanHostPort}:${isSecure ? 443 : 80}`);
+  const reqMod = isSecure ? https : http;
+  const stateObj = getGostStateObject();
+  if ((!stateObj.services || stateObj.services.length === 0) && (!stateObj.chains || stateObj.chains.length === 0)) {
+    return;
+  }
+  const body = wrapEncrypted(stateObj);
+  const req = reqMod.request({
+    host,
+    port,
+    path: `/flow/config?secret=${encodeURIComponent(localConfig.secret)}`,
+    method: 'POST',
+    rejectUnauthorized: false,
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body)
+    },
+    timeout: 5000
+  }, (res) => { res.resume(); });
+  req.on('error', () => {});
+  req.write(body);
+  req.end();
 }
 
 function connectWebSocket() {
@@ -958,9 +1050,14 @@ function connectWebSocket() {
   });
 
   req.on('upgrade', (res, socket) => {
+    tuneTcpSocket(socket);
     wsSocket = socket;
     wsConnected = true;
     console.log(`[Flux-Agent] ✅ 已连接主控: ${cleanHostPort} (version=${AGENT_VERSION})`);
+
+    setTimeout(() => {
+      reportLocalConfigToMaster();
+    }, 200).unref();
 
     let rxBuf = Buffer.alloc(0);
     socket.on('data', async (chunk) => {
@@ -982,7 +1079,7 @@ function connectWebSocket() {
           payloadLen = Number(rxBuf.readBigUInt64BE(2));
           offset = 10;
         }
-        if (payloadLen > 2 * 1024 * 1024) { socket.destroy(); return; }
+        if (payloadLen > 4 * 1024 * 1024) { socket.destroy(); return; }
         const maskLen = masked ? 4 : 0;
         if (rxBuf.length < offset + maskLen + payloadLen) return;
 
@@ -1080,14 +1177,13 @@ setInterval(() => {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
-        'User-Agent': 'GOST-Traffic-Reporter/1.0'
+        'User-Agent': 'GOST-Traffic-Reporter/1.1'
       },
       timeout: 4000
     }, (res) => {
       res.resume();
     });
     req.on('error', () => {
-      // 上报失败则回滚累加，防止丢失流量数据
       const item = trafficDeltas.get(baseName);
       if (item) {
         item.u += uToSend;
@@ -1118,7 +1214,7 @@ function restoreSavedState() {
     }
     if (Array.isArray(saved.services)) {
       for (const s of saved.services) {
-        if (s && s.name) {
+        if (s && s.name && s.name !== 'web_api') {
           try { startServiceInstance(s); } catch (e) {}
         }
       }
