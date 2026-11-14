@@ -1,7 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# Nexus-Flux · 节点被控端一键安装与无损继承脚本 (v1.0.0)
-# 支持自动继承节点原有转发规则 (/etc/gost/gost.json)，实现零断流无缝切换
+# Nexus-Flux · 节点被控端一键安装与管理脚本 (v1.0.0)
 # ==============================================================================
 
 set -e
@@ -9,7 +8,6 @@ export LANG=en_US.UTF-8
 export LC_ALL=C
 
 AGENT_DIR="/opt/nexus-agent"
-LEGACY_DIR="/etc/gost"
 SERVER_ADDR=""
 SECRET=""
 
@@ -37,9 +35,8 @@ ensure_latest_node_runtime() {
     return 0
   fi
 
-  echo "📦 正在安装最新稳定版 Node.js 22 LTS 运行时..."
+  echo "📦 正在安装最新稳定版 Node.js LTS 运行时..."
   if [ -f /etc/debian_version ]; then
-    export DEBIAN_FRONTEND=noninteractive
     apt-get update -y >/dev/null 2>&1 || true
     apt-get install -y curl ca-certificates gnupg >/dev/null 2>&1 || true
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null 2>&1 || true
@@ -52,55 +49,13 @@ ensure_latest_node_runtime() {
   fi
 }
 
-migrate_existing_rules_and_stop_old() {
-  mkdir -p "$AGENT_DIR"
-
-  # 1. 自动继承节点上已有的转发规则与隧道链 (/etc/gost/gost.json -> /opt/nexus-agent/gost.json)
-  if [[ -f "$LEGACY_DIR/gost.json" && -s "$LEGACY_DIR/gost.json" ]]; then
-    local fsize
-    fsize=$(wc -c < "$LEGACY_DIR/gost.json" 2>/dev/null || echo 0)
-    if [[ "$fsize" -gt 5 ]]; then
-      echo "🔄 检测到本机已有正在运行的转发配置 ($LEGACY_DIR/gost.json)，正在无损继承..."
-      cp -f "$LEGACY_DIR/gost.json" "$AGENT_DIR/gost.json"
-    fi
-  fi
-
-  # 2. 读取旧配置的 http/tls/socks 协议开关状态
-  OLD_HTTP=0
-  OLD_TLS=0
-  OLD_SOCKS=0
-  if [[ -f "$LEGACY_DIR/config.json" ]] && command -v node &>/dev/null; then
-    eval "$(node -e "
-      try {
-        const c = JSON.parse(require('fs').readFileSync('$LEGACY_DIR/config.json', 'utf8'));
-        console.log('OLD_HTTP=' + (Number(c.http) || 0));
-        console.log('OLD_TLS=' + (Number(c.tls) || 0));
-        console.log('OLD_SOCKS=' + (Number(c.socks) || 0));
-      } catch (e) {}
-    " 2>/dev/null || true)"
-  elif [[ -f "$AGENT_DIR/config.json" ]] && command -v node &>/dev/null; then
-    eval "$(node -e "
-      try {
-        const c = JSON.parse(require('fs').readFileSync('$AGENT_DIR/config.json', 'utf8'));
-        console.log('OLD_HTTP=' + (Number(c.http) || 0));
-        console.log('OLD_TLS=' + (Number(c.tls) || 0));
-        console.log('OLD_SOCKS=' + (Number(c.socks) || 0));
-      } catch (e) {}
-    " 2>/dev/null || true)"
-  fi
-
-  # 3. 停止并清理旧服务，释放端口并清理旧二进制垃圾
+stop_existing_services() {
   if systemctl list-units --full -all 2>/dev/null | grep -Fq "nexus-agent.service"; then
     systemctl stop nexus-agent 2>/dev/null || true
   fi
   if systemctl list-units --full -all 2>/dev/null | grep -Fq "gost.service"; then
     systemctl stop gost 2>/dev/null || true
     systemctl disable gost 2>/dev/null || true
-    rm -f /etc/systemd/system/gost.service
-  fi
-  pkill -f "/etc/gost/gost" 2>/dev/null || true
-  if [[ -d "$LEGACY_DIR" ]]; then
-    rm -rf "$LEGACY_DIR"
   fi
 }
 
@@ -117,15 +72,16 @@ install_agent() {
   fi
 
   ensure_latest_node_runtime
-  migrate_existing_rules_and_stop_old
+  stop_existing_services
+  mkdir -p "$AGENT_DIR"
 
   cat > "$AGENT_DIR/config.json" <<EOF
 {
   "addr": "$SERVER_ADDR",
   "secret": "$SECRET",
-  "http": ${OLD_HTTP:-0},
-  "tls": ${OLD_TLS:-0},
-  "socks": ${OLD_SOCKS:-0}
+  "http": 0,
+  "tls": 0,
+  "socks": 0
 }
 EOF
   [[ ! -f "$AGENT_DIR/gost.json" ]] && echo "{}" > "$AGENT_DIR/gost.json"
@@ -163,7 +119,7 @@ EOF
   systemctl restart nexus-agent
 
   echo "======================================================="
-  echo " ✅ 节点安装完成，已无损接管本机转发规则并连接主控"
+  echo " ✅ 节点安装完成，服务已启动并设置为开机自启"
   echo " 📁 配置目录: $AGENT_DIR"
   echo " 🔧 服务状态: $(systemctl is-active nexus-agent 2>/dev/null || echo 'running')"
   echo "======================================================="
@@ -188,12 +144,9 @@ update_agent() {
 }
 
 uninstall_agent() {
-  systemctl stop nexus-agent 2>/dev/null || true
-  systemctl disable nexus-agent 2>/dev/null || true
-  systemctl stop gost 2>/dev/null || true
-  systemctl disable gost 2>/dev/null || true
+  stop_existing_services
   rm -f /etc/systemd/system/nexus-agent.service /etc/systemd/system/gost.service
-  rm -rf "$AGENT_DIR" "$LEGACY_DIR"
+  rm -rf "$AGENT_DIR" /etc/gost
   systemctl daemon-reload 2>/dev/null || true
   echo "✅ 节点服务已彻底卸载"
 }

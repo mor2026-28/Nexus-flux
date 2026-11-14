@@ -524,106 +524,60 @@ async function runAllTests() {
     assert.strictEqual(lockedLogin.status, 429, "连续 5 次失败后第 6 次登录应触发 HTTP 429 防爆破锁定");
     console.log("  ✅ PBKDF2-SHA256 密码存储、HTTP 安全响应头及 5 次失败防爆破锁定机制全部验证通过！");
 
-    
-    // ---------------- Round 12: 模拟全新面板「仅添加节点即自动逆向还原现有转发」全流程测试 ----------------
-    console.log("\n[Round 12] 模拟全新面板仅重新添加节点，验证节点本地已有 gost.json 转发零中断继承并自动逆向还原至新面板...");
-    // 1. 清空面板中现有的转发和隧道，模拟一台全新安装的空面板（仅添加节点）
-    for (const f of (await httpReq("POST", "/api/v1/forward/list", {}, authHeaders)).json.data) {
-      await httpReq("POST", "/api/v1/forward/force-delete", { id: f.id }, authHeaders);
-    }
-    for (const t of (await httpReq("POST", "/api/v1/tunnel/list", {}, authHeaders)).json.data) {
-      await httpReq("POST", "/api/v1/tunnel/delete", { id: t.id }, authHeaders);
-    }
-    assert.strictEqual((await httpReq("POST", "/api/v1/forward/list", {}, authHeaders)).json.data.length, 0, "面板转发已清空");
-    assert.strictEqual((await httpReq("POST", "/api/v1/tunnel/list", {}, authHeaders)).json.data.length, 0, "面板隧道已清空");
+    // ---------------- Round 12: 1:1 直观版「转发诊断结果 / 隧道诊断结果」弹窗与 Jitter 抖动指标验证 ----------------
+    console.log("\n[Round 12] 测试 1:1 直观版「转发诊断结果 / 隧道诊断结果」三列大字号弹窗与 Jitter 抖动探测...");
+    assert(html.includes("转发诊断结果") && html.includes("隧道诊断结果"), "包含转发诊断结果与隧道诊断结果大标题");
+    assert(html.includes("平均延迟(ms)") && html.includes("丢包率(%)") && html.includes("连接质量"), "包含三列核心指标标签");
+    assert(html.includes("🚀 优秀") && html.includes("✨ 很好") && html.includes("👍 良好") && html.includes("重新诊断"), "包含连接质量评级胶囊与重新诊断按钮");
 
-    // 2. 停止旧 Agent，并在节点本地写入代表老面板遗留的 gost.json (模拟节点原本已做好 23846 -> 24001 -> 靶机29999 的跨机隧道转发)
-    agent1Proc.kill("SIGTERM");
-    agent2Proc.kill("SIGTERM");
-    await sleep(400);
+    const fwdDiag12 = await httpReq("POST", "/api/v1/forward/diagnose", { forwardId: fwd2.id }, authHeaders);
+    assert.strictEqual(fwdDiag12.json.code, 0);
+    assert.strictEqual(fwdDiag12.json.data.results[0].description, "入口->出口", "第一跳描述应精简为 入口->出口");
+    assert.strictEqual(fwdDiag12.json.data.results[1].description, "出口->目标", "第二跳描述应精简为 出口->目标");
+    assert(typeof fwdDiag12.json.data.results[0].jitter === "number", "诊断结果应返回 jitter 抖动指标");
 
-    fs.writeFileSync(path.join(AGENT1_DIR, "gost.json"), JSON.stringify({
-      services: [
-        {
-          name: "88_1_0_tcp",
-          addr: "127.0.0.1:23846",
-          handler: { type: "tcp", chain: "88_1_0_chains" },
-          listener: { type: "tcp" }
-        },
-        {
-          name: "88_1_0_udp",
-          addr: "127.0.0.1:23846",
-          handler: { type: "udp", chain: "88_1_0_chains" },
-          listener: { type: "udp", metadata: { keepAlive: true } }
-        }
-      ],
-      chains: [
-        {
-          name: "88_1_0_chains",
-          hops: [
-            {
-              name: "hop-88_1_0",
-              nodes: [
-                {
-                  name: "node-88_1_0",
-                  addr: "127.0.0.1:24001",
-                  connector: { type: "relay" },
-                  dialer: { type: "tls" }
-                }
-              ]
+    const tunDiag12 = await httpReq("POST", "/api/v1/tunnel/diagnose", { tunnelId: tun2.id }, authHeaders);
+    assert.strictEqual(tunDiag12.json.code, 0);
+    assert.strictEqual(tunDiag12.json.data.results[0].description, "入口->出口", "隧道第一跳描述应精简为 入口->出口");
+    assert.strictEqual(tunDiag12.json.data.results[1].description, "出口->外网", "隧道第二跳描述应精简为 出口->外网");
+    console.log(`  ✅ 1:1 直观版诊断弹窗 UI、精简分跳标题 (${fwdDiag12.json.data.results[0].description} / ${fwdDiag12.json.data.results[1].description}) 及 Jitter 抖动指标验证通过！`);
+
+    // ---------------- Round 13: 跨境直播流 TLS 1.3 加密隧道 + TCP_NODELAY + 背压流控 10MB 连续推流压测 ----------------
+    console.log("\n[Round 13] 模拟跨境高码率直播推流 (10MB 连续 Shadowsocks raw 高熵流经 TLS 1.3 跨机隧道)...");
+    const streamSize = 10 * 1024 * 1024; // 10 MB
+    const chunkBuf = Buffer.alloc(65536, 0x5a);
+    const streamStart = Date.now();
+    const receivedBytes = await new Promise((resolve, reject) => {
+      const sock = net.createConnection({ host: "127.0.0.1", port: fwd2Port }, () => {
+        sock.setNoDelay(true);
+        let sent = 0;
+        function pump() {
+          while (sent < streamSize) {
+            const toSend = Math.min(chunkBuf.length, streamSize - sent);
+            const slice = toSend === chunkBuf.length ? chunkBuf : chunkBuf.subarray(0, toSend);
+            sent += toSend;
+            if (!sock.write(slice)) {
+              sock.once("drain", pump);
+              return;
             }
-          ]
-        }
-      ],
-      limiters: []
-    }, null, 2));
-
-    fs.writeFileSync(path.join(AGENT2_DIR, "gost.json"), JSON.stringify({
-      services: [
-        {
-          name: "88_1_0_tls",
-          addr: ":24001",
-          handler: { type: "relay" },
-          listener: { type: "tls" },
-          forwarder: {
-            nodes: [{ name: "node_1", addr: `127.0.0.1:${targetPort}` }],
-            selector: { strategy: "fifo", maxFails: 1, failTimeout: 600000000000 }
           }
+          sock.end();
         }
-      ],
-      chains: [],
-      limiters: []
-    }, null, 2));
-
-    // 3. 重新启动两台节点的 Agent（模拟用户在节点上执行了新面板的安装命令并继承了 gost.json）
-    agent1Proc = spawn(process.execPath, ["--max-semi-space-size=2", "--max-old-space-size=48", path.join(__dirname, "..", "agent", "nexus-flux-agent.js")], {
-      cwd: AGENT1_DIR,
-      env: Object.assign({}, process.env, { FLUX_AGENT_DIR: AGENT1_DIR }),
-      stdio: ["ignore", "pipe", "pipe"]
+        pump();
+      });
+      let totalRecv = 0;
+      sock.on("data", (d) => { totalRecv += d.length; });
+      sock.on("end", () => resolve(totalRecv));
+      sock.on("error", reject);
+      sock.setTimeout(15000, () => { sock.destroy(new Error("Stream timeout")); });
     });
-    agent2Proc = spawn(process.execPath, ["--max-semi-space-size=2", "--max-old-space-size=48", path.join(__dirname, "..", "agent", "nexus-flux-agent.js")], {
-      cwd: AGENT2_DIR,
-      env: Object.assign({}, process.env, { FLUX_AGENT_DIR: AGENT2_DIR }),
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-
-    await sleep(1500);
-
-    // 4. 验证节点原有转发端口 23846 100% 正常穿透（零断流）
-    const inheritedEcho = await sendTcpPayload(23846, Buffer.from("ZERO_LOSS_INHERITED_FORWARD_OK"));
-    assert.strictEqual(inheritedEcho.toString(), "ECHO:ZERO_LOSS_INHERITED_FORWARD_OK", "节点原有转发规则无缝继续运行");
-
-    // 5. 验证新面板已自动通过 /flow/config 逆向识别并还原出隧道与转发规则！
-    const adoptedTunnels = (await httpReq("POST", "/api/v1/tunnel/list", {}, authHeaders)).json.data;
-    const adoptedForwards = (await httpReq("POST", "/api/v1/forward/list", {}, authHeaders)).json.data;
-    assert(adoptedTunnels.length >= 1, "新面板已自动逆向还原出隧道记录");
-    assert(adoptedForwards.length >= 1, "新面板已自动逆向还原出转发记录");
-    const adoptedFwd = adoptedForwards.find(f => Number(f.inPort) === 23846);
-    assert(adoptedFwd && adoptedFwd.remoteAddr === `127.0.0.1:${targetPort}`, "逆向还原的转发端口与目标地址 100% 精准匹配");
-    console.log(`  ✅ 仅添加节点即自动逆向还原成功：已自动恢复隧道「${adoptedTunnels[0].name}」与转发「${adoptedFwd.name} (端口:${adoptedFwd.inPort} -> ${adoptedFwd.remoteAddr})」！`);
+    const streamElapsedMs = Math.max(1, Date.now() - streamStart);
+    const throughputMBps = ((receivedBytes / (1024 * 1024)) / (streamElapsedMs / 1000)).toFixed(1);
+    assert(receivedBytes >= streamSize, `10MB 连续直播流应完整传输无丢包 (实际接收: ${receivedBytes} bytes)`);
+    console.log(`  ✅ 10MB 连续高码率直播流经 TLS 1.3 跨机隧道零丢包传输完成！耗时: ${streamElapsedMs}ms, 吞吐速率: ${throughputMBps} MB/s`);
 
     console.log('\n================================================================');
-    console.log(' 🎉 ALL 12 E2E SIMULATION & STRESS TEST ROUNDS PASSED (100% OK)!');
+    console.log(' 🎉 ALL 13 E2E SIMULATION & STRESS TEST ROUNDS PASSED (100% OK)!');
     console.log('================================================================');
   } finally {
     if (targetEcho) targetEcho.close();

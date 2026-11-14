@@ -2131,12 +2131,21 @@
     }
 
     async function handleDiagnoseTunnel(tunnelId) {
-      showToast('正在执行隧道连通性诊断...', 'info');
-      const res = await apiPost('/tunnel/diagnose', { tunnelId });
-      if (res.code === 0 && res.data) {
-        openDiagnosisResultModal(res.data.tunnelName, res.data.results || []);
-      } else {
-        showToast(res.msg || '诊断失败', 'error');
+      const tun = state.tunnels.find(t => Number(t.id) === Number(tunnelId));
+      const badgeLabel = tun && Number(tun.type) === 1 ? '端口转发' : '隧道转发';
+      const badgeCls = tun && Number(tun.type) === 1 ? 'badge-blue' : 'badge-purple';
+      openDiagnosisLoadingModal('隧道诊断结果', tun ? tun.name : '', badgeLabel, badgeCls);
+      try {
+        const res = await apiPost('/tunnel/diagnose', { tunnelId });
+        if (res.code === 0 && res.data) {
+          openDiagnosisResultModal('隧道诊断结果', res.data.tunnelName, badgeLabel, badgeCls, res.data.results || [], `handleDiagnoseTunnel(${tunnelId})`);
+        } else {
+          closeModal();
+          showToast(res.msg || '诊断失败', 'error');
+        }
+      } catch (e) {
+        closeModal();
+        showToast('诊断请求失败', 'error');
       }
     }
 
@@ -2270,42 +2279,128 @@
     }
 
     async function handleDiagnoseForward(forwardId) {
-      showToast('正在执行转发链路诊断...', 'info');
-      const res = await apiPost('/forward/diagnose', { forwardId });
-      if (res.code === 0 && res.data) {
-        openDiagnosisResultModal(res.data.forwardName, res.data.results || []);
-      } else {
-        showToast(res.msg || '诊断失败', 'error');
+      const fwd = state.forwards.find(f => Number(f.id) === Number(forwardId));
+      openDiagnosisLoadingModal('转发诊断结果', fwd ? fwd.name : '', '转发服务', 'badge-blue');
+      try {
+        const res = await apiPost('/forward/diagnose', { forwardId });
+        if (res.code === 0 && res.data) {
+          openDiagnosisResultModal('转发诊断结果', res.data.forwardName, '转发服务', 'badge-blue', res.data.results || [], `handleDiagnoseForward(${forwardId})`);
+        } else {
+          closeModal();
+          showToast(res.msg || '诊断失败', 'error');
+        }
+      } catch (e) {
+        closeModal();
+        showToast('诊断请求失败', 'error');
       }
     }
 
-    function openDiagnosisResultModal(title, results) {
+    function getQualityDisplay(averageTime, packetLoss) {
+      const avg = Number(averageTime);
+      const loss = Number(packetLoss);
+      if (isNaN(avg) || avg < 0) return { text: '😵 失败', cls: 'badge-pink' };
+      if (avg < 30 && loss === 0) return { text: '🚀 优秀', cls: 'badge-green' };
+      if (avg < 50 && loss === 0) return { text: '✨ 很好', cls: 'badge-green' };
+      if (avg < 100 && loss < 1) return { text: '👍 良好', cls: 'badge-blue' };
+      if (avg < 150 && loss < 2) return { text: '😐 一般', cls: 'badge-amber' };
+      if (avg < 200 && loss < 5) return { text: '😟 较差', cls: 'badge-amber' };
+      return { text: '😵 很差', cls: 'badge-pink' };
+    }
+
+    function openDiagnosisLoadingModal(headerTitle, itemName, tagLabel, tagCls) {
       const mount = document.getElementById('modalMount');
       mount.innerHTML = `
         <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
-          <div class="modal-panel">
-            <div class="modal-header">
-              <h3 class="modal-title">诊断结果 - ${escapeHtml(title)}</h3>
-              <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:10px">
-              ${results.map(r => `
-                <div style="padding:12px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-box)">
-                  <div style="display:flex;justify-content:space-between;align-items:center">
-                    <span style="font-weight:700">${escapeHtml(r.description)}</span>
-                    <span class="badge ${r.success ? 'badge-green' : 'badge-pink'}">${r.success ? '连通正常' : '连接失败'}</span>
-                  </div>
-                  <div style="margin-top:6px;font-size:12px;color:var(--text-secondary)">
-                    节点: <b>${escapeHtml(r.nodeName)}</b> → 目标: <code>${escapeHtml(r.targetIp)}:${r.targetPort}</code>
-                  </div>
-                  <div style="margin-top:4px;font-size:12px">
-                    延迟: <b>${r.averageTime >= 0 ? r.averageTime + ' ms' : '-'}</b> | 丢包率: <b>${r.packetLoss}%</b> | 说明: ${escapeHtml(r.message)}
-                  </div>
+          <div class="modal-panel" style="max-width:600px">
+            <div class="modal-header" style="align-items:flex-start;margin-bottom:14px">
+              <div style="flex:1;min-width:0">
+                <h2 style="font-size:18px;font-weight:800;margin:0">${escapeHtml(headerTitle)}</h2>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                  <span style="font-size:13px;color:var(--text-secondary)">${escapeHtml(itemName)}</span>
+                  <span class="badge ${tagCls}">${escapeHtml(tagLabel)}</span>
                 </div>
-              `).join('')}
+              </div>
+              <button class="modal-close" style="margin-left:10px" onclick="closeModal()">×</button>
             </div>
-            <div class="modal-footer">
-              <button class="btn btn-primary" onclick="closeModal()">关闭</button>
+            <div style="padding:48px 0;text-align:center;color:var(--text-secondary)">
+              <div style="font-size:14px;font-weight:600">⏳ 正在执行多跳 TCP 连通性与延迟质量诊断...</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openDiagnosisResultModal(headerTitle, itemName, tagLabel, tagCls, results, retryCall) {
+      const mount = document.getElementById('modalMount');
+      mount.innerHTML = `
+        <div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+          <div class="modal-panel" style="max-width:600px">
+            <div class="modal-header" style="align-items:flex-start;margin-bottom:14px">
+              <div style="flex:1;min-width:0">
+                <h2 style="font-size:18px;font-weight:800;margin:0">${escapeHtml(headerTitle)}</h2>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                  <span style="font-size:13.5px;color:var(--text-secondary);font-weight:500">${escapeHtml(itemName)}</span>
+                  <span class="badge ${tagCls}">${escapeHtml(tagLabel)}</span>
+                </div>
+              </div>
+              <button class="modal-close" style="margin-left:10px" onclick="closeModal()">×</button>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:14px">
+              ${results.map(r => {
+                const ok = r.success !== false;
+                const q = getQualityDisplay(r.averageTime, r.packetLoss);
+                const borderColor = ok ? '#17c964' : '#f31260';
+                const avgDisplay = ok && r.averageTime >= 0 ? Math.round(Number(r.averageTime)) : '-';
+                const lossDisplay = ok && r.packetLoss >= 0 ? Number(r.packetLoss).toFixed(1) : '100.0';
+                return `
+                  <div style="padding:18px 20px;border-radius:12px;border:1.5px solid ${borderColor};background:var(--bg-card);box-shadow:var(--shadow-card)">
+                    <div>
+                      <div style="font-size:16.5px;font-weight:700;color:var(--text-main)">${escapeHtml(r.description)}</div>
+                      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                        <span style="font-size:13px;color:var(--text-secondary)">节点: ${escapeHtml(r.nodeName)}</span>
+                        <span class="badge ${ok ? 'badge-green' : 'badge-pink'}">${ok ? '连接成功' : '连接失败'}</span>
+                      </div>
+                    </div>
+
+                    ${ok ? `
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;margin:18px 0 16px">
+                        <div>
+                          <div style="font-size:24px;font-weight:800;color:var(--primary);line-height:1.2">${avgDisplay}</div>
+                          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">平均延迟(ms)</div>
+                        </div>
+                        <div>
+                          <div style="font-size:24px;font-weight:800;color:var(--warning);line-height:1.2">${lossDisplay}</div>
+                          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">丢包率(%)</div>
+                        </div>
+                        <div>
+                          <div>
+                            <span class="badge ${q.cls}" style="padding:5px 12px;font-size:13px;border-radius:999px">${q.text}</span>
+                          </div>
+                          <div style="font-size:12px;color:var(--text-muted);margin-top:5px">连接质量</div>
+                        </div>
+                      </div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--text-secondary)">
+                        <span>目标地址: <code style="font-family:monospace">${escapeHtml(r.targetIp)}${r.targetPort ? ':' + r.targetPort : ''}</code></span>
+                        ${r.jitter !== undefined && r.jitter >= 0 ? `<span style="font-size:11.5px;color:var(--text-muted)">抖动: ${Number(r.jitter).toFixed(1)}ms</span>` : ''}
+                      </div>
+                    ` : `
+                      <div style="margin-top:12px;font-size:12.5px;color:var(--text-secondary)">
+                        目标地址: <code style="font-family:monospace">${escapeHtml(r.targetIp)}${r.targetPort ? ':' + r.targetPort : ''}</code>
+                      </div>
+                      <div class="alert-box alert-danger" style="margin-top:10px">
+                        <span>❌</span>
+                        <span>错误详情: ${escapeHtml(r.message || '连接超时或目标端口未响应')}</span>
+                      </div>
+                    `}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <div class="modal-footer" style="margin-top:18px">
+              <button class="btn btn-ghost" style="background:transparent;border:none" onclick="closeModal()">关闭</button>
+              ${retryCall ? `<button class="btn btn-primary" style="padding:8px 18px;border-radius:10px" onclick="${retryCall}">重新诊断</button>` : ''}
             </div>
           </div>
         </div>

@@ -977,246 +977,6 @@ function parseFluxSqlDump(sqlText) {
   return result;
 }
 
-
-// ======================= 节点已有转发配置逆向自动识别与无损领养 =======================
-function extractPortFromListenAddr(addrStr) {
-  if (!addrStr) return 0;
-  const s = String(addrStr).trim();
-  const idx = s.lastIndexOf(':');
-  if (idx === -1) return Number(s) || 0;
-  return Number(s.slice(idx + 1)) || 0;
-}
-
-function extractListenHost(addrStr) {
-  if (!addrStr) return '[::]';
-  const s = String(addrStr).trim();
-  const idx = s.lastIndexOf(':');
-  if (idx <= 0) return '[::]';
-  return s.slice(0, idx) || '[::]';
-}
-
-function adoptNodeReportedConfig(reportingNode, gostConfig) {
-  if (!reportingNode || !gostConfig || typeof gostConfig !== 'object') return;
-  if (!db.meta.nodeConfigs) db.meta.nodeConfigs = {};
-  db.meta.nodeConfigs[reportingNode.id] = {
-    nodeId: reportingNode.id,
-    updatedAt: Date.now(),
-    services: Array.isArray(gostConfig.services) ? gostConfig.services : [],
-    chains: Array.isArray(gostConfig.chains) ? gostConfig.chains : [],
-    limiters: Array.isArray(gostConfig.limiters) ? gostConfig.limiters : []
-  };
-
-  let changed = false;
-
-  // 1. 收集所有节点上报的出口 Relay 服务 (_tls)
-  // key1: servicePrefix (如 "1_1_0"), key2: "nodeId:outPort"
-  const relayByPrefix = new Map();
-  const relayByNodePort = new Map();
-
-  for (const [nIdStr, nCfg] of Object.entries(db.meta.nodeConfigs)) {
-    const nId = Number(nIdStr);
-    const outNode = db.nodes.find(n => Number(n.id) === nId);
-    if (!outNode || !Array.isArray(nCfg.services)) continue;
-
-    for (const svc of nCfg.services) {
-      if (!svc || !svc.name || !String(svc.name).endsWith('_tls')) continue;
-      const prefix = String(svc.name).replace(/_tls$/, '');
-      const outPort = extractPortFromListenAddr(svc.addr);
-      const protocol = (svc.listener && svc.listener.type) || 'tls';
-      const nodes = (svc.forwarder && Array.isArray(svc.forwarder.nodes)) ? svc.forwarder.nodes : [];
-      const remoteAddr = nodes.map(x => x.addr).filter(Boolean).join(',');
-      const strategy = (svc.forwarder && svc.forwarder.selector && svc.forwarder.selector.strategy) || 'fifo';
-      const interfaceName = (svc.metadata && svc.metadata.interface) || '';
-
-      const relayInfo = { outNode, outPort, protocol, remoteAddr, strategy, interfaceName, prefix };
-      relayByPrefix.set(prefix, relayInfo);
-      if (outPort > 0) {
-        relayByNodePort.set(`${nId}:${outPort}`, relayInfo);
-      }
-    }
-  }
-
-  // 2. 扫描所有节点上报的入口主服务 (_tcp) 与转发链 (_chains)
-  for (const [nIdStr, nCfg] of Object.entries(db.meta.nodeConfigs)) {
-    const inNodeId = Number(nIdStr);
-    const inNode = db.nodes.find(n => Number(n.id) === inNodeId);
-    if (!inNode || !Array.isArray(nCfg.services)) continue;
-
-    const chainMap = new Map();
-    if (Array.isArray(nCfg.chains)) {
-      for (const c of nCfg.chains) {
-        if (c && c.name) chainMap.set(String(c.name), c);
-      }
-    }
-
-    for (const svc of nCfg.services) {
-      if (!svc || !svc.name || !String(svc.name).endsWith('_tcp')) continue;
-      const prefix = String(svc.name).replace(/_tcp$/, '');
-      const parts = prefix.split('_');
-      const origForwardId = Number(parts[0]) || null;
-      const inPort = extractPortFromListenAddr(svc.addr);
-      if (!inPort) continue;
-
-      // 检查该入口节点的该端口是否已经在 db.forwards 中存在
-      const inTunnelIds = new Set(db.tunnels.filter(t => Number(t.inNodeId) === inNodeId).map(t => Number(t.id)));
-      const alreadyExists = db.forwards.some(f => inTunnelIds.has(Number(f.tunnelId)) && Number(f.inPort) === inPort);
-      if (alreadyExists) continue;
-
-      const tcpListenAddr = extractListenHost(svc.addr);
-      const chainName = svc.handler && svc.handler.chain;
-
-      if (!chainName && svc.forwarder && Array.isArray(svc.forwarder.nodes) && svc.forwarder.nodes.length > 0) {
-        // 情况 A：单机端口直转 (type = 1)
-        const remoteAddr = svc.forwarder.nodes.map(x => x.addr).filter(Boolean).join(',');
-        const strategy = (svc.forwarder.selector && svc.forwarder.selector.strategy) || 'fifo';
-        const interfaceName = (svc.metadata && svc.metadata.interface) || '';
-
-        let tunnel = db.tunnels.find(t => Number(t.type) === 1 && Number(t.inNodeId) === inNodeId);
-        if (!tunnel) {
-          tunnel = {
-            id: db.meta.nextIds.tunnel++,
-            name: `${inNode.name}-直转`,
-            type: 1,
-            inNodeId: inNode.id,
-            inIp: inNode.ip,
-            outNodeId: inNode.id,
-            outIp: inNode.serverIp,
-            protocol: null,
-            tcpListenAddr,
-            udpListenAddr: tcpListenAddr,
-            interfaceName: '',
-            flow: 1,
-            trafficRatio: 1.0,
-            status: 1,
-            createdTime: Date.now(),
-            updatedTime: Date.now()
-          };
-          db.tunnels.push(tunnel);
-        }
-
-        const newId = (origForwardId && !db.forwards.some(f => Number(f.id) === origForwardId))
-          ? origForwardId
-          : db.meta.nextIds.forward++;
-        if (newId >= db.meta.nextIds.forward) db.meta.nextIds.forward = newId + 1;
-
-        db.forwards.push({
-          id: newId,
-          userId: 1,
-          userName: db.admin.user,
-          name: `${inNode.name}-${inPort}`,
-          tunnelId: tunnel.id,
-          inPort,
-          outPort: null,
-          remoteAddr,
-          strategy,
-          interfaceName,
-          speedId: null,
-          inFlow: 0,
-          outFlow: 0,
-          createdTime: Date.now(),
-          updatedTime: Date.now(),
-          status: 1,
-          inx: db.forwards.length
-        });
-        changed = true;
-      } else if (chainName) {
-        // 情况 B：跨机隧道转发 (type = 2)
-        const chainCfg = chainMap.get(String(chainName));
-        const hopNode = chainCfg && Array.isArray(chainCfg.hops) && chainCfg.hops[0] && Array.isArray(chainCfg.hops[0].nodes) && chainCfg.hops[0].nodes[0];
-        if (!hopNode || !hopNode.addr) continue;
-
-        const parsedHop = splitHostPort(hopNode.addr);
-        if (!parsedHop) continue;
-        const outIp = parsedHop.host;
-        const outPort = Number(parsedHop.port);
-        const protocol = (hopNode.dialer && hopNode.dialer.type) || 'tls';
-
-        // 优先通过唯一服务前缀或端口匹配上报了 _tls 出口服务的精确出口节点
-        let relayInfo = relayByPrefix.get(prefix);
-        let outNode = (relayInfo && relayInfo.outNode) || db.nodes.find(n => Number(n.id) !== inNode.id && (n.serverIp === outIp || String(n.ip || '').split(/[\n,]+/).map(s => s.trim()).includes(outIp)));
-        if (!relayInfo && outNode) {
-          relayInfo = relayByNodePort.get(`${outNode.id}:${outPort}`);
-        }
-        if (!outNode) continue; // 等待用户把出口节点也添加进面板后自动完成拼图
-
-        const remoteAddr = (relayInfo && relayInfo.remoteAddr) ? relayInfo.remoteAddr : `${outIp}:${outPort}`;
-        const strategy = (relayInfo && relayInfo.strategy) || 'fifo';
-
-        let tunnel = db.tunnels.find(t =>
-          Number(t.type) === 2 &&
-          Number(t.inNodeId) === inNode.id &&
-          Number(t.outNodeId) === outNode.id &&
-          (t.protocol || 'tls') === protocol
-        );
-        if (!tunnel) {
-          tunnel = {
-            id: db.meta.nextIds.tunnel++,
-            name: `${inNode.name}-${outNode.name}`,
-            type: 2,
-            inNodeId: inNode.id,
-            inIp: inNode.ip,
-            outNodeId: outNode.id,
-            outIp: outNode.serverIp,
-            protocol,
-            tcpListenAddr,
-            udpListenAddr: tcpListenAddr,
-            interfaceName: hopNode.interface || '',
-            flow: 1,
-            trafficRatio: 1.0,
-            status: 1,
-            createdTime: Date.now(),
-            updatedTime: Date.now()
-          };
-          db.tunnels.push(tunnel);
-        }
-
-        const newId = (origForwardId && !db.forwards.some(f => Number(f.id) === origForwardId))
-          ? origForwardId
-          : db.meta.nextIds.forward++;
-        if (newId >= db.meta.nextIds.forward) db.meta.nextIds.forward = newId + 1;
-
-        db.forwards.push({
-          id: newId,
-          userId: 1,
-          userName: db.admin.user,
-          name: `${inNode.name}-${outNode.name}-${inPort}`,
-          tunnelId: tunnel.id,
-          inPort,
-          outPort,
-          remoteAddr,
-          strategy,
-          interfaceName: (relayInfo && relayInfo.interfaceName) || '',
-          speedId: null,
-          inFlow: 0,
-          outFlow: 0,
-          createdTime: Date.now(),
-          updatedTime: Date.now(),
-          status: 1,
-          inx: db.forwards.length
-        });
-        changed = true;
-      }
-    }
-  }
-
-  // 如果出口节点晚于入口节点上线，补充修正之前暂存的 remoteAddr
-  for (const fwd of db.forwards) {
-    const tun = db.tunnels.find(t => Number(t.id) === Number(fwd.tunnelId));
-    if (tun && Number(tun.type) === 2 && fwd.outPort) {
-      const relayInfo = relayByNodePort.get(`${tun.outNodeId}:${fwd.outPort}`) || relayByPrefix.get(`${fwd.id}_1_0`);
-      if (relayInfo && relayInfo.remoteAddr && fwd.remoteAddr !== relayInfo.remoteAddr) {
-        fwd.remoteAddr = relayInfo.remoteAddr;
-        changed = true;
-      }
-    }
-  }
-
-  if (changed) {
-    saveDbSync();
-    console.log(`[Nexus-Flux] 🔄 已从节点 ${reportingNode.name} 自动识别并无损恢复现有隧道与转发配置`);
-  }
-}
-
 // ======================= HTTP 路由处理器 =======================
 async function handleHttpRequest(req, res) {
   if (req.method === 'OPTIONS') {
@@ -1334,8 +1094,26 @@ async function handleHttpRequest(req, res) {
       const rawBody = await readRequestBody(req);
       const decrypted = unwrapEncryptedMessage(rawBody, secret);
       const gostConfig = JSON.parse(decrypted);
-      // 自动识别并无损领养节点上已有的转发服务与隧道链（绝不误删节点已有转发）
-      adoptNodeReportedConfig(node, gostConfig);
+      // 自动清理被控节点上已删除的孤立转发服务
+      if (gostConfig && Array.isArray(gostConfig.services)) {
+        for (const svc of gostConfig.services) {
+          if (!svc.name || svc.name === 'web_api') continue;
+          const parts = String(svc.name).split('_');
+          if (parts.length === 4) {
+            const fwdId = Number(parts[0]);
+            const svcPrefix = `${parts[0]}_${parts[1]}_${parts[2]}`;
+            const typeSuffix = parts[3];
+            const exists = db.forwards.some(f => Number(f.id) === fwdId);
+            if (!exists) {
+              if (typeSuffix === 'tcp') {
+                sendNodeCommand(node.id, 'DeleteService', { services: [`${svcPrefix}_tcp`, `${svcPrefix}_udp`] });
+              } else if (typeSuffix === 'tls') {
+                sendNodeCommand(node.id, 'DeleteService', { services: [`${svcPrefix}_tls`] });
+              }
+            }
+          }
+        }
+      }
     } catch (e) {}
     sendText(res, 200, 'ok');
     return;
@@ -1793,16 +1571,16 @@ async function handleHttpRequest(req, res) {
       }
       const results = [];
       if (Number(tunnel.type) === 1) {
-        const r1 = await performNodeTcpPing(inNode, 'www.cloudflare.com', 443, '入口节点 -> 公网连通性 (Cloudflare:443)');
+        const r1 = await performNodeTcpPing(inNode, 'www.cloudflare.com', 443, '入口->外网');
         results.push(r1);
       } else {
         const outNode = db.nodes.find(n => Number(n.id) === Number(tunnel.outNodeId));
         const activeFwd = db.forwards.find(f => Number(f.tunnelId) === tunnelId && Number(f.status) === 1);
         const testOutPort = activeFwd && activeFwd.outPort ? activeFwd.outPort : 22;
         if (outNode) {
-          const r1 = await performNodeTcpPing(inNode, outNode.serverIp, testOutPort, `入口(${inNode.name}) -> 出口(${outNode.name}:${testOutPort})`);
+          const r1 = await performNodeTcpPing(inNode, outNode.serverIp, testOutPort, '入口->出口');
           results.push(r1);
-          const r2 = await performNodeTcpPing(outNode, 'www.cloudflare.com', 443, `出口(${outNode.name}) -> 公网连通性 (Cloudflare:443)`);
+          const r2 = await performNodeTcpPing(outNode, 'www.cloudflare.com', 443, '出口->外网');
           results.push(r2);
         }
       }
@@ -2058,22 +1836,22 @@ async function handleHttpRequest(req, res) {
       const targets = String(fwd.remoteAddr || '').split(',').map(s => s.trim()).filter(Boolean);
 
       if (Number(tunnel.type) === 1) {
-        for (const addr of targets) {
-          const parsed = splitHostPort(addr);
+        for (let idx = 0; idx < targets.length; idx++) {
+          const parsed = splitHostPort(targets[idx]);
           if (parsed) {
-            const r = await performNodeTcpPing(inNode, parsed.host, parsed.port, `入口(${inNode.name}) -> 目标(${addr})`);
+            const r = await performNodeTcpPing(inNode, parsed.host, parsed.port, targets.length > 1 ? `转发->目标(${idx + 1})` : '转发->目标');
             results.push(r);
           }
         }
       } else {
         const outNode = db.nodes.find(n => Number(n.id) === Number(tunnel.outNodeId));
         if (outNode) {
-          const rInOut = await performNodeTcpPing(inNode, outNode.serverIp, fwd.outPort || 22, `入口(${inNode.name}) -> 出口(${outNode.name}:${fwd.outPort})`);
+          const rInOut = await performNodeTcpPing(inNode, outNode.serverIp, fwd.outPort || 22, '入口->出口');
           results.push(rInOut);
-          for (const addr of targets) {
-            const parsed = splitHostPort(addr);
+          for (let idx = 0; idx < targets.length; idx++) {
+            const parsed = splitHostPort(targets[idx]);
             if (parsed) {
-              const rOutTarget = await performNodeTcpPing(outNode, parsed.host, parsed.port, `出口(${outNode.name}) -> 目标(${addr})`);
+              const rOutTarget = await performNodeTcpPing(outNode, parsed.host, parsed.port, targets.length > 1 ? `出口->目标(${idx + 1})` : '出口->目标');
               results.push(rOutTarget);
             }
           }
@@ -2337,7 +2115,7 @@ async function performNodeTcpPing(node, targetIp, targetPort, description) {
   const res = await sendNodeCommand(node.id, 'TcpPing', {
     ip: targetIp,
     port: Number(targetPort),
-    count: 3,
+    count: 4,
     timeout: 3000
   }, 10000);
 
@@ -2345,8 +2123,11 @@ async function performNodeTcpPing(node, targetIp, targetPort, description) {
     const data = res.data || {};
     baseResult.success = data.success !== false;
     baseResult.averageTime = Number(data.averageTime ?? 0);
+    baseResult.minTime = Number(data.minTime ?? data.averageTime ?? 0);
+    baseResult.maxTime = Number(data.maxTime ?? data.averageTime ?? 0);
+    baseResult.jitter = Number(data.jitter ?? 0);
     baseResult.packetLoss = Number(data.packetLoss ?? 0);
-    baseResult.message = baseResult.success ? 'TCP 连接正常' : (data.errorMessage || '连接失败');
+    baseResult.message = baseResult.success ? '连接成功' : (data.errorMessage || '连接失败');
   } else {
     baseResult.message = res ? res.msg : '节点无响应';
   }
